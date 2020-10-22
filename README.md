@@ -19,15 +19,15 @@ Yes, but it's much, much more.  It's one of my main CAD design tools;
 I use it for architecture, drafting, plansets, landscape design, and
 so on.  But it's always been missing one thing... multi-page support.
 
-What to do? The trick may Inkscape users have figured out is to 
+What to do? The trick many Inkscape users have figured out is to 
 use layers as pages.  It's not the most elegant workaround but
-it's relatively easy to do.  Except when it comes time to produce
-a PDF document form all those layers.  Hence this tool: `ink2pdf`
+it *is* easy to do.  Except when it comes time to produce
+a PDF document from all those layers -- hence this tool: `ink2pdf`
 
 ## How's it work?
 
 The trick-within-a-trick is to put a page number in each of
-your layers.  For example, consider these layer names:
+your layer names.  For example, consider these layer names:
 
     p1) Introduction
     p2) The Problem
@@ -66,4 +66,12 @@ be used on multiple pages:
     p<)        Left-side (odd) pages
     p>)        Right-side (even) pages 
 
-# More TBD...
+# INSTALLATION
+
+# ink2pdf Usage
+
+# inklayers Usage
+
+# inkpages Usage
+
+
