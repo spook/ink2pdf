@@ -62,8 +62,8 @@ You can assign multiple layers to a page; and the same layer can be used on mult
     p-9)       Same as p1-9) but considered "incomplete"
     p2,4,6-10) Only pages 2, 4, and 6 through 10
     p3.14)     Page numbers need not be integers
-    p<)        Left-side (odd) pages
-    p>)        Right-side (even) pages 
+    pL)        Left-side (odd) pages
+    pR)        Right-side (even) pages 
     b5)        Background for page 5, *if* there's a page 5 - note the "b"
     
 Layers with incomplete page prefixes, such as `p*)`, `p2-)`, or `p>` --
@@ -71,13 +71,28 @@ or backgrounded pages that use "b" instead of "p" as the first character --
 won't be shown unless there's at least one other layer assigned
 to a matching page.
 
-## Dependencies
+### Conditional Tags
+
+Layers may be tagged with short identifiers, called *conditional tags* (ctags).
+When running `ink2pdf` the ctags may be specified with the `--tags` (-t) option.
+Then layers are skipped if their ctags do not match.
+
+Consider for example an Inkscape drawing that's a cartoon or graphic novel, 
+and you want the related text to be in either English or German.
+You can tag english layers with "en" and german layers with "de":
+
+    p5) Superman Leaps Tall Bulding
+    p5(en) Bubble Text
+    p5(de) Bubble Text
+
+
+## INSTALLATION
+
+### Dependencies
 
 * pdfunite
 * Perl module XML::LibXML
 * Perl module XML::LibXML::XPathContext
-
-## INSTALLATION
 
 ## ink2pdf Usage
 ```
@@ -87,6 +102,7 @@ ink2pdf [options] inkscape-file
 -i, --insert N:file  Insert existing PDF file into document at page N; can use multiple times
 -o, --output PDFFILE Specify the output PDF file name; default is to replace ".svg" suffix of input
                        file name with ".pdf"; if no ".svg" suffix then ".pdf" is appended.
+-t, --tags TAGS      Conditional tags in effect; separate multiple tags with commas
 ```
 
 ## inklayers Usage
