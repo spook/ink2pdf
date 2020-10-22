@@ -80,8 +80,14 @@ to a matching page.
 ## INSTALLATION
 
 ## ink2pdf Usage
+```
+ink2pdf [options] inkscape-file
 
--k  Don't unite the pages into one PDF; keep each page as it's own numbered .pdf file
+-k, --keep           Don't unite the pages into one PDF; keep each page as it's own numbered .pdf file
+-i, --insert N:file  Insert existing PDF file into document at page N; can use multiple times
+-o, --output PDFFILE Specify the output PDF file name; default is to replace ".svg" suffix of input
+                       file name with ".pdf"; if no ".svg" suffix then ".pdf" is appended.
+```
 
 ## inklayers Usage
 
