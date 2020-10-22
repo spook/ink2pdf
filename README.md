@@ -1,7 +1,7 @@
 # ink2pdf
 Inkscape to Multi-Page PDF Document
 
-**INITIAL PROJECT - NOT YET READY**
+**INITIAL PROJECT - DRAFT - NOT YET READY**
 
 Generates a multi-page PDF document from your Inkscape document.
 Includes other Inkscape layer tools:
@@ -52,26 +52,41 @@ p50 becomes page 3, and p999 becomes page 4.
 
 Layers without a page prefix are ignored.
 
-### Background Layers
+### Repeated and Background Layers
 
-You can assign multiple layers to a page; and the same layer can 
-be used on multiple pages:
+You can assign multiple layers to a page; and the same layer can be used on multiple pages:
 
     p*)        Background layer, goes on all pages
     p2-)       Applies to pages 2 and up
-    p9-13)     Goes on pages 9 thru 11
-    p-9)       Same as p1-9)
+    p9-13)     Used for pages 9 thru 13
+    p-9)       Same as p1-9) but considered "incomplete"
     p2,4,6-10) Only pages 2, 4, and 6 through 10
     p3.14)     Page numbers need not be integers
     p<)        Left-side (odd) pages
     p>)        Right-side (even) pages 
+    b5)        Background for page 5, *if* there's a page 5 - note the "b"
+    
+Layers with incomplete page prefixes, such as `p*)`, `p2-)`, or `p>` --
+or backgrounded pages that use "b" instead of "p" as the first character --
+won't be shown unless there's at least one other layer assigned
+to a matching page.
 
-# INSTALLATION
+## Dependencies
 
-# ink2pdf Usage
+* pdfunite
+* Perl module XML::LibXML
+* Perl module XML::LibXML::XPathContext
 
-# inklayers Usage
+## INSTALLATION
 
-# inkpages Usage
+## ink2pdf Usage
 
+-k  Don't unite the pages into one PDF; keep each page as it's own numbered .pdf file
 
+## inklayers Usage
+
+## inkpages Usage
+
+## Credits
+
+Thanx to https://graphicdesign.stackexchange.com/questions/54615/inkscape-scripting-how-to-show-hide-a-layer-and-export#54990 for the parsing hint.
