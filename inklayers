@@ -1,0 +1,49 @@
+#!/usr/bin/perl -w
+# See https://graphicdesign.stackexchange.com/questions/54615/inkscape-scripting-how-to-show-hide-a-layer-and-export#54990
+use XML::LibXML;
+use XML::LibXML::XPathContext;
+
+die "*** Usage: $0 input-svg-file [layer-name(s)-to-make-visible] [temp-output-file-name]
+       Shows the layers in an Inkscape file, or sets the given layer visible.
+
+       Given just an input Inkscape .svg file, prints out all the layer names.
+       Given a layer name and an output file, copies the input to the output but
+       with that indicated layer set visible and all other layers hidden.
+
+       Multiple layers can be listed using the bang (!) to delimit them.
+
+       Remember to quote the layer name if it contains spaces or other shell
+       metacharacters, so your shell will process it correctly.
+" unless @ARGV;
+my $svgfile    = $ARGV[0];
+my $showlabels = $ARGV[1];
+my $svgtemp    = $ARGV[2] || "$svgfile.tmp";
+my $showonly   = @ARGV == 1;
+my $xstat      = $showonly ? 0 : 2;           # 2=ENOENT using it to mean the layer label isn't found
+
+my @labels = split (/!/, $showlabels);
+
+my $xml = XML::LibXML->load_xml(location => $svgfile);
+my $xpath = XML::LibXML::XPathContext->new($xml);
+$xpath->registerNs("defNs", 'http://www.w3.org/2000/svg');
+LAYER: foreach my $layer ($xpath->findnodes('/defNs:svg/defNs:g[@inkscape:groupmode="layer"]')) {
+    my $label = $layer->{'inkscape:label'};
+    if ($showonly) {
+        print "$label\n";
+        next LAYER;
+    }
+    foreach my $wantlabel (@labels) {
+        if ($label eq $wantlabel) {
+            $layer->{'style'} =~ s{\bdisplay:none\b}{display:inline};
+            $xstat = 0;    # EOK
+            print "Visible: $label\n";
+            next LAYER;
+        }
+    }
+    $layer->{'style'} =~ s{\bdisplay:inline\b}{display:none};
+}
+
+$xml->toFile($svgtemp);
+print "Wrote $svgtemp\n" if !$xstat;
+exit $xstat;
+
