@@ -90,8 +90,27 @@ ink2pdf [options] inkscape-file
 ```
 
 ## inklayers Usage
+```
+inklayers [options] inkscape-file
+
+With no options, displays the layer names (the "labels") of all layers in the file.
+Use --verbose (-v) to show even more information.
+
+The --show LAYER option unhides the named layer, and hides all others unless the --keep option is also specified.
+The --show option may be used multiple times to make multiple layers visible.
+Use --show * to set all layers visible.
+
+The --hide LAYER option hides the named layer.  This option may be repeated.
+
+```
 
 ## inkpages Usage
+```
+inkpages [options] inkscape-file
+
+Shows the page structure that ink2pdf would use when parsing the inkscape file.
+
+```
 
 ## Credits
 
