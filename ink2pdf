@@ -1,0 +1,127 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+
+use v5.10.0;
+use Getopt::Long;
+use Pod::Usage;
+use XML::LibXML;
+use XML::LibXML::XPathContext;
+
+my $MODE_EACH   = 'each';
+my $MODE_PREFIX = 'prefix';
+
+# Inits
+#<<<
+my $opts = {};
+GetOptions($opts,
+    "background|b:s",
+    "help|h",
+    "insert|i:s@",
+    "keep|k",
+    "show-layers|l",
+    "mode|m:s",
+    "output|o:s",
+    "tags|t:s",
+    "verbose|v",
+    ) or pod2usage(-verbose => 0,
+                   -exitval => 22,  # 22 = EINVAL Invalid argument
+                   -message => "*** Invalid option or bad syntax");
+#>>>
+pod2usage(
+    -verbose => 2,
+    -exitval => 0
+) if $opts->{help};
+pod2usage(
+    -verbose => 0,
+    -exitval => 2,  # 2 = ENOENT NO such file
+    -message => "*** Missing Inkscape SVG filename"
+) if !@ARGV;
+my $SVGFILE    = $ARGV[0];
+my $BGLAYER    = $opts->{background} || q{};
+my $KEEP       = $opts->{keep};
+my $MODE       = $opts->{mode} || $MODE_EACH;
+my $SHOWLAYERS = $opts->{'show-layers'};
+my @CTAGS      = split(',', $opts->{tags} || q{});
+my $VERBOSE    = $opts->{verbose};
+pod2usage(
+    -verbose => 0,
+    -exitval => 22, # 22 = EINVAL Invalid argument
+    -message => "*** Bad mode, must be $MODE_EACH or $MODE_PREFIX"
+    )
+    if ($MODE ne $MODE_EACH)
+    and ($MODE ne $MODE_PREFIX);
+die "*** Conditional tags may only be used in $MODE_PREFIX mode\n"
+    if @CTAGS && ($MODE ne $MODE_PREFIX);
+
+# Load layer names
+my @LAYERS = inklayers($SVGFILE);
+die "*** No layers in file $SVGFILE\n" unless @LAYERS;
+if ($VERBOSE || $SHOWLAYERS) {
+    say "Top-level layers in file $SVGFILE:" if $VERBOSE;
+    say join("\n", @LAYERS);
+    exit 0 if $SHOWLAYERS;
+}
+if ($BGLAYER) {
+    warn "--- Background layer not found: $BGLAYER\n"
+        unless grep {$_ eq $BGLAYER} @LAYERS;
+}
+
+$MODE eq $MODE_EACH ? do_by_each()
+                    : do_by_prefix()
+                    ;
+
+exit 0;
+
+sub do_by_each {
+}
+
+sub do_by_prefix {
+}
+
+# Get layer names (technically, called "labels")
+sub inklayers {
+    my $svgfile = shift;
+    my $xml     = XML::LibXML->load_xml(location => $svgfile);
+    my $xpath   = XML::LibXML::XPathContext->new($xml);
+    $xpath->registerNs("defNs", 'http://www.w3.org/2000/svg');
+    my @labels = ();
+    foreach my $layer ($xpath->findnodes('/defNs:svg/defNs:g[@inkscape:groupmode="layer"]')) {
+        my $label = $layer->{'inkscape:label'};
+        push @labels, $label;
+    }
+    return @labels;
+}
+
+__END__
+
+=head1 NAME
+
+ink2pdf - Inkscape to Multi-Page PDF Document
+
+=head1 SYNOPSIS
+
+ ink2pdf [options] inkscape-file
+
+ Options:
+  -b  --background L   Use layer L as a backround layer ("each" mode only)
+  -h  --help           Usage summary
+  -i  --insert N:file  Insert existing PDF file into document at page N; 
+                         can use multiple times
+  -k  --keep           Don't unite the pages into one PDF; keep each page 
+                         as it's own numbered .pdf file
+  -l  --show-layers    Show layer names and exit
+  -m  --mode MODE      Layer mapping mode; "each" (default) maps each layer 
+                         to a page; "prefix" uses page prefixes.
+  -o  --output PDFFILE Specify the output PDF file name; default is to 
+                         replace the ".svg" suffix of the input file name 
+                         with ".pdf"; if no ".svg" suffix then ".pdf" is 
+                         appended.
+  -t  --tags TAGS      Conditional tags in effect; separate tags with commas
+  -v  --verbose        Verbose mode
+
+=head1 DESCRIPTION
+
+Generates a multi-page PDF document from your Inkscape document.
+
+=cut
