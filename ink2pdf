@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use v5.10.0;
+use File::Spec;
 use Getopt::Long;
 use Pod::Usage;
 use XML::LibXML;
@@ -74,6 +75,36 @@ $MODE eq $MODE_EACH ? do_by_each()
 exit 0;
 
 sub do_by_each {
+    my (undef, undef, $base) = File::Spec->splitpath($SVGFILE);
+    $base =~ s{\.svg$}{}i;
+    
+    my $pnum = 0;
+    my @pdf_files = ();
+    foreach my $layer (@LAYERS) {
+        next if $layer eq $BGLAYER;
+        ++$pnum;
+        my $tmpfile = sprintf("$base-%3.3d.svg", $pnum);
+        say "Temp SVG $tmpfile with layer '$layer' visible" if $VERBOSE;
+        set_layer_visible($SVGFILE, $tmpfile, $layer, $BGLAYER);
+        
+        # PDF generation
+        my $pdffile = sprintf("$base-%3.3d.pdf", $pnum);
+        push @pdf_files, $pdffile;
+        generate_pdf($tmpfile, $pdffile);
+        say "Temp PDF $pdffile generated" if $VERBOSE;
+
+        # Cleanup
+        unlink $tmpfile;
+    }
+    
+    # Unify PDF's
+    if ($KEEP) {
+        say "Keeping individual PDF files";
+    }
+    else {
+        # ... unify ...
+    }
+
 }
 
 sub do_by_prefix {
@@ -91,6 +122,12 @@ sub inklayers {
         push @labels, $label;
     }
     return @labels;
+}
+
+sub set_layer_visible {
+}
+
+sub generate_pdf {
 }
 
 __END__
