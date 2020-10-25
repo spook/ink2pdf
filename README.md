@@ -26,8 +26,26 @@ a PDF document from all those layers -- hence this tool: `ink2pdf`
 
 ## How's it work?
 
-The trick-within-a-trick is to put a page number in each of
-your layer names.  For example, consider these layer names:
+### A Layer is a Page
+
+By default, each layer in your Inkscape document becomes a page
+in the PDF output.  You can also specify on the command line that
+one of the layers is a background for all the other pages. 
+For more detailed control over the layer-to-page mappings,
+use *page prefixes*.
+
+### Sublayers?
+
+Inkscape sublayers are left as-is.  If the parent layer is mapped
+to a page, then the sublayers, if any, are also mapped if they are
+set visible in the Inkscape file.
+
+### The Page Prefix
+
+For more control over how pages are mapped from layers, use *page prefixes*.
+
+This works by prefixing each layer's name with a page number, using a special format.
+For example, consider these layer names:
 
     p1) Introduction
     p2) The Problem
@@ -46,7 +64,7 @@ The following layer names produce the same PDF output as the first example above
     p21) The Problem
     p999) Conclusion
 
-The page prefixes in the layer names indicate the output page sequence, not the actual PDF page number.  
+The page prefixes in the layer names indicate the output page sequence, not the actual PDF page number. 
 In the above example, p00 becomes output page number 1, p21 becomes page 2,
 p50 becomes page 3, and p999 becomes page 4.
 
