@@ -21,7 +21,7 @@ my $svgtemp    = $ARGV[2] || "$svgfile.tmp";
 my $showonly   = @ARGV == 1;
 my $xstat      = $showonly ? 0 : 2;           # 2=ENOENT using it to mean the layer label isn't found
 
-my @labels = split (/!/, $showlabels);
+my @labels = split (/!/, $showlabels || q{});
 
 my $xml = XML::LibXML->load_xml(location => $svgfile);
 my $xpath = XML::LibXML::XPathContext->new($xml);
@@ -42,6 +42,7 @@ LAYER: foreach my $layer ($xpath->findnodes('/defNs:svg/defNs:g[@inkscape:groupm
     }
     $layer->{'style'} =~ s{\bdisplay:inline\b}{display:none};
 }
+exit $xstat if $showonly;
 
 $xml->toFile($svgtemp);
 print "Wrote $svgtemp\n" if !$xstat;
