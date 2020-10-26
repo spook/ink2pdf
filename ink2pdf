@@ -35,7 +35,7 @@ pod2usage(
 ) if $opts->{help};
 pod2usage(
     -verbose => 0,
-    -exitval => 2,  # 2 = ENOENT NO such file
+    -exitval => 2,                                    # 2 = ENOENT NO such file
     -message => "*** Missing Inkscape SVG filename"
 ) if !@ARGV;
 my $SVGFILE    = $ARGV[0];
@@ -47,20 +47,30 @@ my @CTAGS      = split(',', $opts->{tags} || q{});
 my $VERBOSE    = $opts->{verbose};
 pod2usage(
     -verbose => 0,
-    -exitval => 22, # 22 = EINVAL Invalid argument
-    -message => "*** Bad mode, must be $MODE_EACH or $MODE_PREFIX"
+    -exitval => 22,                                   # 22 = EINVAL Invalid argument
+    -message => "*** Bad mode, must be '$MODE_EACH' or '$MODE_PREFIX'"
     )
     if ($MODE ne $MODE_EACH)
     and ($MODE ne $MODE_PREFIX);
 die "*** Conditional tags may only be used in $MODE_PREFIX mode\n"
     if @CTAGS && ($MODE ne $MODE_PREFIX);
 
-# Load layer names
-my @LAYERS = inklayers($SVGFILE);
+# Load file
+my $xml = XML::LibXML->load_xml(location => $SVGFILE);
+my $xpath = XML::LibXML::XPathContext->new($xml);
+$xpath->registerNs("defNs", 'http://www.w3.org/2000/svg');
+
+# Create related file names
+my (undef, undef, $base) = File::Spec->splitpath($SVGFILE);
+$base =~ s{\.svg$}{}i;
+my $outfile = $opts->{output} || "$base.pdf";
+
+# Get layer names
+my @LAYERS = get_layers($xpath);
 die "*** No layers in file $SVGFILE\n" unless @LAYERS;
 if ($VERBOSE || $SHOWLAYERS) {
-    say "Top-level layers in file $SVGFILE:" if $VERBOSE;
-    say join("\n", @LAYERS);
+    say "Top-level layers:" if $VERBOSE;
+    print map {"  $_\n"} @LAYERS;
     exit 0 if $SHOWLAYERS;
 }
 if ($BGLAYER) {
@@ -68,54 +78,66 @@ if ($BGLAYER) {
         unless grep {$_ eq $BGLAYER} @LAYERS;
 }
 
-$MODE eq $MODE_EACH ? do_by_each()
-                    : do_by_prefix()
-                    ;
+$MODE eq $MODE_EACH
+    ? do_by_each()
+    : do_by_prefix();
 
 exit 0;
 
 sub do_by_each {
-    my (undef, undef, $base) = File::Spec->splitpath($SVGFILE);
-    $base =~ s{\.svg$}{}i;
-    
-    my $pnum = 0;
+    say "Page Generation..." if $VERBOSE;
+
+    my $pnum      = 0;
     my @pdf_files = ();
     foreach my $layer (@LAYERS) {
         next if $layer eq $BGLAYER;
         ++$pnum;
+
+        # Create temp SVG with desired layers set
         my $tmpfile = sprintf("$base-%3.3d.svg", $pnum);
-        say "Temp SVG $tmpfile with layer '$layer' visible" if $VERBOSE;
-        set_layer_visible($SVGFILE, $tmpfile, $layer, $BGLAYER);
-        
+        say "  Temp SVG $tmpfile with layer '$layer' visible" if $VERBOSE;
+        my $n = set_layers_visible($xpath, $layer, $BGLAYER);
+        warn "--- No such layer: $layer\n" unless $n;
+        $xml->toFile($tmpfile);
+
         # PDF generation
         my $pdffile = sprintf("$base-%3.3d.pdf", $pnum);
         push @pdf_files, $pdffile;
         generate_pdf($tmpfile, $pdffile);
-        say "Temp PDF $pdffile generated" if $VERBOSE;
+        say "  Temp PDF $pdffile generated" if $VERBOSE;
 
         # Cleanup
         unlink $tmpfile;
     }
-    
+
     # Unify PDF's
     if ($KEEP) {
-        say "Keeping individual PDF files";
+        say "Individual PDF files will be kept (-k)" if $VERBOSE;
     }
     else {
         # ... unify ...
+        say "  Unifying pages" if $VERBOSE;
+        system("pdfunite " . join(" ", map {"'$_'"} @pdf_files) . " '" . $outfile . "'");
+        say "  Cleanup" if $VERBOSE;
+        unlink @pdf_files;
+        say "Created $outfile" if $VERBOSE;
     }
-
 }
 
 sub do_by_prefix {
+    die "*** Prefix method not yet implemented\n";
+}
+
+# Create a one-page PDF
+sub generate_pdf {
+    my $inkfile = shift;
+    my $outfile = shift;
+    system("inkscape -z -A '$outfile' '$inkfile' 2>/dev/null");
 }
 
 # Get layer names (technically, called "labels")
-sub inklayers {
-    my $svgfile = shift;
-    my $xml     = XML::LibXML->load_xml(location => $svgfile);
-    my $xpath   = XML::LibXML::XPathContext->new($xml);
-    $xpath->registerNs("defNs", 'http://www.w3.org/2000/svg');
+sub get_layers {
+    my $xpath  = shift;
     my @labels = ();
     foreach my $layer ($xpath->findnodes('/defNs:svg/defNs:g[@inkscape:groupmode="layer"]')) {
         my $label = $layer->{'inkscape:label'};
@@ -124,10 +146,24 @@ sub inklayers {
     return @labels;
 }
 
-sub set_layer_visible {
-}
+sub set_layers_visible {
+    my $xpath = shift;
+    my @toset = @_;
 
-sub generate_pdf {
+    my $numset = 0;
+LAYER:
+    foreach my $layer ($xpath->findnodes('/defNs:svg/defNs:g[@inkscape:groupmode="layer"]')) {
+        my $label = $layer->{'inkscape:label'};
+        foreach my $wantlabel (@toset) {
+            if ($label eq $wantlabel) {
+                $layer->{'style'} =~ s{\bdisplay:none\b}{display:inline};
+                ++$numset;
+                next LAYER;
+            }
+        }
+        $layer->{'style'} =~ s{\bdisplay:inline\b}{display:none};
+    }
+    return $numset;
 }
 
 __END__
@@ -160,5 +196,7 @@ ink2pdf - Inkscape to Multi-Page PDF Document
 =head1 DESCRIPTION
 
 Generates a multi-page PDF document from your Inkscape document.
+By default each layer becomes a page; use "page prefixes" in your
+Inkscape document for much better control.
 
 =cut
