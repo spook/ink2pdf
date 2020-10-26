@@ -125,10 +125,10 @@ sub do_by_prefix {
     my @prefixen = ();
     foreach my $layer (@LAYERS) {
         next unless $layer =~ m{^\s* ([pbc])
-                                     (\*|[0-9LR\.\-]+)?
+                                     (\* | L | R | [0-9\.\-]+)?
                                      (?:\(([a-z0-9\-\,]+))?
                                      \)ix };
-        push @prefixen, [$1, $2, $3, $layer];
+        push @prefixen, [lc $1, $2, $3, $layer];
     }
 
 #TEMP
@@ -138,21 +138,90 @@ sub do_by_prefix {
     }
 #ENDTEMP
 
-    # Determine numerical page range
-    my $lo = 0;
-    my $hi = 0;
+    # Get content sequence numbers
+    my @cseq = ();
     foreach my $x (@prefixen) {
-        my $pages = $x->[1];
-        next unless $pages;
-        foreach my $ppart (split(/[-,]/, $pages)) {
-            my $num = $ppart + 0.0;
-            next unless $num;
-            $lo = $num if !$lo || $lo > $num;
-            $hi = $num if !$hi || $hi < $num;
+        next if $x->[0] eq 'b';               # skip forced background layers
+        my $seq = $x->[1];
+        next unless $seq;                     # skip blank
+        next unless $seq =~ m{^[0-9\.,]+$};   # can't be bg layer
+        foreach my $sq (split(/,/, $seq)) {
+            next unless $sq =~ m{^\d+(\.\d*)?$};  # Not a number - error??? XXX
+            push @cseq, $sq;
         }
     }
-say "Range: $lo - $hi"; #XXX
 
+    # Build layer-sets list
+    my @l2p  = ();
+    my $pnum = 1;
+    for my $sq (sort @cseq) {
+
+        # Find all layers that match
+        my $any = 0;
+        foreach my $x (@prefixen) {
+            if (seq_match($sq, $x->[1])) {  # TODO: ctag match
+                my $lname = $x->[3];
+                if ($any) {
+                    # Add to current page
+                    push @{$l2p[-1]}, $lname;
+                    print("    + $lname\n");    ### TEMP
+                }
+                else {
+                    # Start new page
+                    ++$pnum;
+                    push @l2p, [$lname];
+                    printf("%3.3d   %s\n", $pnum, $lname);    ### TEMP
+                    $any = 1;
+                }
+            }
+        }
+    }
+    die "*** No content in output\n" unless @l2p;
+
+    # Generate output
+    $pnum = 0;
+    my @pdf_files = ();
+    foreach my $lset (@l2p) {
+        ++$pnum;
+
+        # Create temp SVG with desired layers set
+        my $tmpfile = sprintf("$base-%3.3d.svg", $pnum);
+        say "  Temp SVG $tmpfile" if $VERBOSE;
+        my $n = set_layers_visible($xpath, @$lset);
+        warn "--- No matching layers for:\n" . (map {"\t$_\n"} @$lset) unless $n;
+        $xml->toFile($tmpfile);
+
+        # PDF generation
+        my $pdffile = sprintf("$base-%3.3d.pdf", $pnum);
+        push @pdf_files, $pdffile;
+        generate_pdf($tmpfile, $pdffile);
+        say "  Temp PDF $pdffile generated" if $VERBOSE;
+
+        # Cleanup
+        unlink $tmpfile;
+    }
+
+    # Unify PDF's
+    if ($KEEP) {
+        say "Individual PDF files will be kept (-k)" if $VERBOSE;
+    }
+    else {
+        # ... unify ...
+        say "  Unifying pages" if $VERBOSE;
+        system("pdfunite " . join(" ", map {"'$_'"} @pdf_files) . " '" . $outfile . "'");
+        say "  Cleanup" if $VERBOSE;
+        unlink @pdf_files;
+        say "Created $outfile" if $VERBOSE;
+    }
+
+}
+
+# Does a given sequence match a sequence spec?
+sub seq_match {
+    my $sq = shift;
+    my $spec = shift;
+
+    # TODO
 }
 
 # Create a one-page PDF
