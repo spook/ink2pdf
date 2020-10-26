@@ -131,10 +131,28 @@ sub do_by_prefix {
         push @prefixen, [$1, $2, $3, $layer];
     }
 
+#TEMP
     say "Prefixen:";
     foreach my $x (@prefixen) {
         say "  type: $x->[0]\tpages: ".($x->[1]||q{--})."\ttags: ".($x->[2]||q{--})."\tlayer: '$x->[3]'";
     }
+#ENDTEMP
+
+    # Determine numerical page range
+    my $lo = 0;
+    my $hi = 0;
+    foreach my $x (@prefixen) {
+        my $pages = $x->[1];
+        next unless $pages;
+        foreach my $ppart (split(/[-,]/, $pages)) {
+            my $num = $ppart + 0.0;
+            next unless $num;
+            $lo = $num if !$lo || $lo > $num;
+            $hi = $num if !$hi || $hi < $num;
+        }
+    }
+say "Range: $lo - $hi"; #XXX
+
 }
 
 # Create a one-page PDF
