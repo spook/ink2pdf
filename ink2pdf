@@ -70,7 +70,8 @@ my @LAYERS = get_layers($xpath);
 die "*** No layers in file $SVGFILE\n" unless @LAYERS;
 if ($VERBOSE || $SHOWLAYERS) {
     say "Top-level layers:" if $VERBOSE;
-    print map {"  $_\n"} @LAYERS;
+    my $sp = $VERBOSE ? "  " : q{};
+    print map {"$sp$_\n"} @LAYERS;
     exit 0 if $SHOWLAYERS;
 }
 if ($BGLAYER) {
