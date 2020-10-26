@@ -9,9 +9,6 @@ use Pod::Usage;
 use XML::LibXML;
 use XML::LibXML::XPathContext;
 
-my $MODE_EACH   = 'each';
-my $MODE_PREFIX = 'prefix';
-
 # Inits
 #<<<
 my $opts = {};
@@ -21,10 +18,10 @@ GetOptions($opts,
     "insert|i:s@",
     "keep|k",
     "show-layers|l",
-    "mode|m:s",
     "output|o:s",
     "tags|t:s",
     "verbose|v",
+    "prefixes|x",
     ) or pod2usage(-verbose => 0,
                    -exitval => 22,  # 22 = EINVAL Invalid argument
                    -message => "*** Invalid option or bad syntax");
@@ -41,19 +38,12 @@ pod2usage(
 my $SVGFILE    = $ARGV[0];
 my $BGLAYER    = $opts->{background} || q{};
 my $KEEP       = $opts->{keep};
-my $MODE       = $opts->{mode} || $MODE_EACH;
 my $SHOWLAYERS = $opts->{'show-layers'};
 my @CTAGS      = split(',', $opts->{tags} || q{});
 my $VERBOSE    = $opts->{verbose};
-pod2usage(
-    -verbose => 0,
-    -exitval => 22,                                   # 22 = EINVAL Invalid argument
-    -message => "*** Bad mode, must be '$MODE_EACH' or '$MODE_PREFIX'"
-    )
-    if ($MODE ne $MODE_EACH)
-    and ($MODE ne $MODE_PREFIX);
-die "*** Conditional tags may only be used in $MODE_PREFIX mode\n"
-    if @CTAGS && ($MODE ne $MODE_PREFIX);
+my $XMODE      = $opts->{prefixes};
+die "*** Conditional tags may only be used with --prefixes (-x)\n"
+    if @CTAGS && !$XMODE;
 
 # Load file
 my $xml = XML::LibXML->load_xml(location => $SVGFILE);
@@ -79,11 +69,15 @@ if ($BGLAYER) {
         unless grep {$_ eq $BGLAYER} @LAYERS;
 }
 
-$MODE eq $MODE_EACH
-    ? do_by_each()
-    : do_by_prefix();
+$XMODE
+    ? do_by_prefix()
+    : do_by_each();
 
 exit 0;
+
+#
+#                           ------- o -------
+#
 
 sub do_by_each {
     say "Page Generation..." if $VERBOSE;
@@ -126,7 +120,21 @@ sub do_by_each {
 }
 
 sub do_by_prefix {
-    die "*** Prefix method not yet implemented\n";
+    warn "*** Prefix method not yet implemented\n";
+
+    my @prefixen = ();
+    foreach my $layer (@LAYERS) {
+        next unless $layer =~ m{^\s* ([pb])
+                                     (\*|[0-9LR\.\-]+)?
+                                     (?:\(([a-z0-9\-\,]+))?
+                                     \)ix };
+        push @prefixen, [$1, $2, $3, $layer];
+    }
+
+    say "Prefixen:";
+    foreach my $x (@prefixen) {
+        say "  type: $x->[0]\tpages: ".($x->[1]||q{--})."\ttags: ".($x->[2]||q{--})."\tlayer: '$x->[3]'";
+    }
 }
 
 # Create a one-page PDF
@@ -178,26 +186,25 @@ ink2pdf - Inkscape to Multi-Page PDF Document
  ink2pdf [options] inkscape-file
 
  Options:
-  -b  --background L   Use layer L as a backround layer ("each" mode only)
+  -b  --background L   Use layer L as a backround layer (cannot use with -x)
   -h  --help           Usage summary
   -i  --insert N:file  Insert existing PDF file into document at page N; 
                          can use multiple times
   -k  --keep           Don't unite the pages into one PDF; keep each page 
                          as it's own numbered .pdf file
   -l  --show-layers    Show layer names and exit
-  -m  --mode MODE      Layer mapping mode; "each" (default) maps each layer 
-                         to a page; "prefix" uses page prefixes.
   -o  --output PDFFILE Specify the output PDF file name; default is to 
                          replace the ".svg" suffix of the input file name 
                          with ".pdf"; if no ".svg" suffix then ".pdf" is 
                          appended.
   -t  --tags TAGS      Conditional tags in effect; separate tags with commas
+  -x  --prefixes       Parse prefixes in layer names
   -v  --verbose        Verbose mode
 
 =head1 DESCRIPTION
 
 Generates a multi-page PDF document from your Inkscape document.
 By default each layer becomes a page; use "page prefixes" in your
-Inkscape document for much better control.
+Inkscape document and the --prefixes (-x) option for better control.
 
 =cut
