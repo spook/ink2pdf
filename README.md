@@ -13,7 +13,7 @@ Includes other Inkscape layer tools:
 
 ## Multiple Pages.. In Inkscape?
 
-Inkscape is a drawing tool, right?  
+Inkscape is a drawing tool, right?
 
 Yes, but it's much, much more.  It's one of my main CAD design tools;
 I use it for architecture, drafting, plansets, landscape design, and
@@ -31,8 +31,9 @@ a PDF document from all those layers -- hence this tool: `ink2pdf`
 By default, each layer in your Inkscape document becomes a page
 in the PDF output.  You can also specify on the command line that
 one of the layers is a background for all the other pages. 
+
 For more detailed control over the layer-to-page mappings,
-use *page prefixes*.
+use *page prefixes* with the --prefixes (-x) option.
 
 ### Sublayers?
 
@@ -43,6 +44,7 @@ set visible in the Inkscape file.
 ### The Page Prefix
 
 For more control over how pages are mapped from layers, use *page prefixes*.
+Page prefixes are processed only in --prefixes (-x) mode.
 
 This works by prefixing each layer's name with a page number, using a special format.
 For example, consider these layer names:
@@ -64,7 +66,8 @@ The following layer names produce the same PDF output as the first example above
     p21) The Problem
     p999) Conclusion
 
-The page prefixes in the layer names indicate the output page sequence, not the actual PDF page number. 
+The page prefixes in the layer names indicate the output page sequence, 
+not the resultant PDF page number. 
 In the above example, p00 becomes output page number 1, p21 becomes page 2,
 p50 becomes page 3, and p999 becomes page 4.
 
@@ -84,10 +87,10 @@ You can assign multiple layers to a page; and the same layer can be used on mult
     pR)        Right-side (even) pages 
     b5)        Background for page 5, *if* there's a page 5 - note the "b"
     
-Layers with incomplete page prefixes, such as `p*)`, `p2-)`, or `p>` --
+Layers with incomplete page prefixes, such as `p*)`, `p2-)`, or `pR` --
 or backgrounded pages that use "b" instead of "p" as the first character --
-won't be shown unless there's at least one other layer assigned
-to a matching page.
+won't be shown unless there's at least one other layer associated with
+a matching page.
 
 ### Conditional Tags
 
@@ -103,6 +106,7 @@ You can tag english layers with "en" and german layers with "de":
     p5(en) Bubble Text
     p5(de) Bubble Text
 
+Contitional tags are processed only in --prefixes (-x) mode.
 
 ## INSTALLATION
 
