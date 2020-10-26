@@ -99,7 +99,7 @@ follows:
     p2-)    Background for page 2 and up.
     p-50)   Background for all pages up to and including 50
     p*)     Background layer for all pages
-    pL)     Background layer for left-side (even) output pages
+    pL)     Background layer for left-side (even) output pages - does not include page 1 (intentional)
     pR)     Background layer for right-side (odd) output pages
     
 A background layer is used with a content layer; if there's no matching

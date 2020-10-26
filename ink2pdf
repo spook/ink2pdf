@@ -120,21 +120,19 @@ sub do_by_each {
 }
 
 sub do_by_prefix {
-    warn "*** Prefix method not yet implemented\n";
-
     my @prefixen = ();
     foreach my $layer (@LAYERS) {
         next unless $layer =~ m{^\s* ([pbc])
                                      (\* | L | R | [0-9\.\-]+)?
                                      (?:\(([a-z0-9\-\,]+))?
-                                     \)ix };
-        push @prefixen, [lc $1, $2, $3, $layer];
+                                     \) }ix;
+        push @prefixen, [lc $1, lc($2)||q{}, lc($3)||q{}, $layer];  # pbc, seq, ctag, layername
     }
 
 #TEMP
     say "Prefixen:";
     foreach my $x (@prefixen) {
-        say "  type: $x->[0]\tpages: ".($x->[1]||q{--})."\ttags: ".($x->[2]||q{--})."\tlayer: '$x->[3]'";
+        say "  type: $x->[0]  pages: ".($x->[1]||q{--})."\ttags: ".($x->[2]||q{--})."\tlayer: '$x->[3]'";
     }
 #ENDTEMP
 
@@ -146,7 +144,10 @@ sub do_by_prefix {
         next unless $seq;                     # skip blank
         next unless $seq =~ m{^[0-9\.,]+$};   # can't be bg layer
         foreach my $sq (split(/,/, $seq)) {
-            next unless $sq =~ m{^\d+(\.\d*)?$};  # Not a number - error??? XXX
+            if ($sq !~ m{^\d+(\.\d*)?$}) {
+                warn "--- Skip bad sequence number '$sq' in layer name '$x->[3]'\n";
+                next;
+            }
             push @cseq, $sq;
         }
     }
@@ -154,12 +155,12 @@ sub do_by_prefix {
     # Build layer-sets list
     my @l2p  = ();
     my $pnum = 1;
-    for my $sq (sort @cseq) {
+    for my $sq (sort {($a+0.0) <=> ($b+0.0)} @cseq) {
 
         # Find all layers that match
         my $any = 0;
         foreach my $x (@prefixen) {
-            if (seq_match($sq, $x->[1])) {  # TODO: ctag match
+            if (seq_match($sq, $x->[1], $pnum)) {  # TODO: ctag match
                 my $lname = $x->[3];
                 if ($any) {
                     # Add to current page
@@ -168,13 +169,13 @@ sub do_by_prefix {
                 }
                 else {
                     # Start new page
-                    ++$pnum;
                     push @l2p, [$lname];
                     printf("%3.3d   %s\n", $pnum, $lname);    ### TEMP
                     $any = 1;
                 }
             }
         }
+        ++$pnum if $any;
     }
     die "*** No content in output\n" unless @l2p;
 
@@ -220,8 +221,15 @@ sub do_by_prefix {
 sub seq_match {
     my $sq = shift;
     my $spec = shift;
+    my $pnum = shift;
+
+    return 1 if $spec eq '*';
+    return 1 if ($spec eq 'l') && ($pnum % 2) && ($pnum != 1);  # Left-side doesn't include p1
+    return 1 if ($spec eq 'r') && !($pnum % 2);
+    return 1 if $sq eq $spec;
 
     # TODO
+    return 0;
 }
 
 # Create a one-page PDF
