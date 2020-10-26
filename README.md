@@ -46,7 +46,7 @@ set visible in the Inkscape file.
 For more control over how pages are mapped from layers, use *page prefixes*.
 Page prefixes are processed only in --prefixes (-x) mode.
 
-This works by prefixing each layer's name with a page number, using a special format.
+This works by prefixing each layer's name with a *sequence number*, using a special format.
 For example, consider these layer names:
 
     p1) Introduction
@@ -58,7 +58,7 @@ The "p1)" is part of the layer name.  I call it the *page prefix*.
 This tells the `ink2pdf` tool how to assign layers to the generated output PDF pages.
 You, as the author of the Inkscape document, put that prefix into the layer's name.
 
-The page numbers do not have to be in order, nor do they have to be sequential.
+The numbers do not have to be in order, and there can be gaps in the sequence.
 The following layer names produce the same PDF output as the first example above:
 
     p00) Introduction
@@ -66,37 +66,51 @@ The following layer names produce the same PDF output as the first example above
     p21) The Problem
     p999) Conclusion
 
-The page prefixes in the layer names indicate the output page sequence, 
+The sequence numbers in the layer names indicate the output order, 
 not the resultant PDF page number. 
 In the above example, p00 becomes output page number 1, p21 becomes page 2,
 p50 becomes page 3, and p999 becomes page 4.
 
 Layers without a page prefix are ignored.
 
-### Repeated and Background Layers
+### Content Layers and Background Layers
 
-You can assign multiple layers to a page; and the same layer can be used on multiple pages:
+Depending upon how the prefix is specified, the layer is a *content* layer 
+or a *background* layer.
 
-    p*)        Background layer, goes on all pages
-    p2-)       Applies to pages 2 and up
-    p9-13)     Used for pages 9 thru 13
-    p-9)       Same as p1-9) but considered "incomplete"
-    p2,4,6-10) Only pages 2, 4, and 6 through 10
-    p3.14)     Page numbers need not be integers
-    pL)        Left-side (odd) pages
-    pR)        Right-side (even) pages 
-    b5)        Background for page 5, *if* there's a page 5 - note the "b"
+The layers in your Inkscape document are usually content layers.
+Content layers begin with the letter 'p' or 'c' (case insensitive).
+The number(s) must be specified explicitely; ranges or left/right
+indications cannot be used.  These are valid prefixes for content layers:
+
+    p1)       Normal way to indicate page 1
+    p003)     Another way to indicate page 3
+    p4,8)     This layer is assigned to two pages
+    p10.5)    Decimal values allowed; easy way to insert a forgotten page
+
+Background layers begin with the letter 'p' or 'b'.
+They can have a single number like a content page, or a list of numbers,
+or they can indicate a range (2-5), or they can be a special character as
+follows:
+
+    b1)     Background for page 1 - note the "b"
+    b4,8)   Background layer for pages 4 and 8 - lists are allowed - note the "b"
+    p2-10)  Background for pages 2 thru 10 inclusive.  The use of a range forces this to be a background layer.
+    p2-)    Background for page 2 and up.
+    p-50)   Background for all pages up to and including 50
+    p*)     Background layer for all pages
+    pL)     Background layer for left-side (even) output pages
+    pR)     Background layer for right-side (odd) output pages
     
-Layers with incomplete page prefixes, such as `p*)`, `p2-)`, or `pR` --
-or backgrounded pages that use "b" instead of "p" as the first character --
-won't be shown unless there's at least one other layer associated with
-a matching page.
+A background layer is used with a content layer; if there's no matching
+content layer then the background layer is ignored.
 
 ### Conditional Tags
 
 Layers may be tagged with short identifiers, called *conditional tags* (ctags).
 When running `ink2pdf` the ctags may be specified with the `--tags` (-t) option.
-Then layers are skipped if their ctags do not match.
+Ctags are used to enable and disable layers on output.  If a layer has a ctag,
+but the tag is not specified in the `--tags` option, then that layer is ignored.
 
 Consider for example an Inkscape drawing that's a cartoon or graphic novel, 
 and you want the related text to be in either English or German.
@@ -106,11 +120,16 @@ You can tag english layers with "en" and german layers with "de":
     p5(en) Bubble Text
     p5(de) Bubble Text
 
-Contitional tags are processed only in --prefixes (-x) mode.
+CTags are short simple identifiers.  They must consist of only letters, digits, and the dash.
+Multiple ctags are allowed in the prefix:
+
+    p102(en,fr) Superman meets Lois
+
+Conditional tags are processed only in --prefixes (-x) mode.
 
 ## INSTALLATION
 
-### Dependencies
+### Prerequisites
 
 * pdfunite
 * Perl module XML::LibXML
@@ -118,13 +137,23 @@ Contitional tags are processed only in --prefixes (-x) mode.
 
 ## ink2pdf Usage
 ```
-ink2pdf [options] inkscape-file
+     ink2pdf [options] inkscape-file
 
--k, --keep           Don't unite the pages into one PDF; keep each page as it's own numbered .pdf file
--i, --insert N:file  Insert existing PDF file into document at page N; can use multiple times
--o, --output PDFFILE Specify the output PDF file name; default is to replace ".svg" suffix of input
-                       file name with ".pdf"; if no ".svg" suffix then ".pdf" is appended.
--t, --tags TAGS      Conditional tags in effect; separate multiple tags with commas
+     Options:
+      -b  --background L   Use layer L as a backround layer (cannot use with -x)
+      -h  --help           Usage summary
+      -i  --insert N:file  Insert existing PDF file into document at page N; 
+                             can use multiple times
+      -k  --keep           Don't unite the pages into one PDF; keep each page 
+                             as it's own numbered .pdf file
+      -l  --show-layers    Show layer names and exit
+      -o  --output PDFFILE Specify the output PDF file name; default is to 
+                             replace the ".svg" suffix of the input file name 
+                             with ".pdf"; if no ".svg" suffix then ".pdf" is 
+                             appended.
+      -t  --tags TAGS      Conditional tags in effect; separate tags with commas
+      -x  --prefixes       Parse prefixes in layer names
+      -v  --verbose        Verbose mode
 ```
 
 ## inklayers Usage

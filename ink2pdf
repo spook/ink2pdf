@@ -124,7 +124,7 @@ sub do_by_prefix {
 
     my @prefixen = ();
     foreach my $layer (@LAYERS) {
-        next unless $layer =~ m{^\s* ([pb])
+        next unless $layer =~ m{^\s* ([pbc])
                                      (\*|[0-9LR\.\-]+)?
                                      (?:\(([a-z0-9\-\,]+))?
                                      \)ix };
