@@ -60,15 +60,13 @@ my $outfile = $opts->{output} || "$base.pdf";
 # Get layer names
 my @LAYERS = get_layers($xpath);
 die "*** No layers in file $SVGFILE\n" unless @LAYERS;
-if ($VERBOSE || $SHOWLAYERS) {
-    say "Top-level layers:" if $VERBOSE;
-    my $sp = $VERBOSE ? "  " : q{};
-    print map {"$sp$_\n"} @LAYERS;
-    exit 0 if $SHOWLAYERS;
+if ($SHOWLAYERS) {
+    print map {"$_\n"} @LAYERS;
+    exit 0;
 }
 if ($BGLAYER) {
     unless (grep {$_ eq $BGLAYER} @LAYERS) {
-        warn "--- Background layer not found: '$BGLAYER'\n";
+        warn "--- No such background layer: '$BGLAYER'\n";
         $BGLAYER = q{};
     }
 }
@@ -83,49 +81,17 @@ exit 0;
 #                           ------- o -------
 #
 
-sub show_mapping_each {
-    my $pmax = scalar(@LAYERS) - ($BGLAYER? 1 : 0);
-    if ($pmax > 99) {
-        print " " x 40;
-        for my $p (1..$pmax) {
-          print(int($p/100) || ".");
-        }
-        print "\n";
-    }
-    if ($pmax > 9) {
-        print " " x 40;
-        for my $p (1..$pmax) {
-          print((int($p/10) % 10) || ".");
-        }
-        print "\n";
-    }
-    print "  Layer                     Page # -->  ";
-    for my $p (1..$pmax) {
-      print $p % 10;
-    }
-    print "\n";
-    say   "  ==================================== +" . ('=' x $pmax) . "+";
-    my $pnum = 0;
-    foreach my $layer (@LAYERS) {
-        printf("  %-36s |", substr($layer, 0, 36));
-        if ($layer eq $BGLAYER) {
-            print("*" x $pmax);
-        }
-        else {
-            ++$pnum;
-            print "." x ($pnum-1);
-            print "*";
-            print "." x ($pmax-$pnum);
-        }
-        print "|\n";
-    }
-    say   "  ==================================== +" . ('=' x $pmax) . "+";
-}
-
 sub do_by_each {
-    return show_mapping_each if $SHOWMAPPING;
-    say "Page Generation..." if $VERBOSE;
 
+    # Create layer set
+    my @lset = ();
+    foreach my $layer (@LAYERS) {
+        next if $layer eq $BGLAYER;
+        push @lset, [$layer, $BGLAYER || ()];
+    }
+    return show_page_mapping(@lset) if $SHOWMAPPING;
+
+    say "Page Generation..." if $VERBOSE;
     my $pnum      = 0;
     my @pdf_files = ();
     foreach my $layer (@LAYERS) {
@@ -223,6 +189,7 @@ sub do_by_prefix {
         ++$pnum if $any;
     }
     die "*** No content in output\n" unless @l2p;
+    return show_page_mapping(@l2p) if $SHOWMAPPING;
 
     # Generate output
     $pnum = 0;
@@ -263,21 +230,6 @@ sub do_by_prefix {
 
 }
 
-# Does a given sequence match a sequence spec?
-sub seq_match {
-    my $sq = shift;
-    my $spec = shift;
-    my $pnum = shift;
-
-    return 1 if $spec eq '*';
-    return 1 if ($spec eq 'l') && ($pnum % 2) && ($pnum != 1);  # Left-side doesn't include p1
-    return 1 if ($spec eq 'r') && !($pnum % 2);
-    return 1 if $sq eq $spec;
-
-    # TODO
-    return 0;
-}
-
 # Create a one-page PDF
 sub generate_pdf {
     my $inkfile = shift;
@@ -297,6 +249,23 @@ sub get_layers {
     return @labels;
 }
 
+
+# Does a given sequence match a sequence spec?
+sub seq_match {
+    my $sq = shift;
+    my $spec = shift;
+    my $pnum = shift;
+
+    return 1 if $spec eq '*';
+    return 1 if ($spec eq 'l') && ($pnum % 2) && ($pnum != 1);  # Left-side doesn't include p1
+    return 1 if ($spec eq 'r') && !($pnum % 2);
+    return 1 if $sq eq $spec;
+
+    # TODO
+    return 0;
+}
+
+# Set the given layers visible, hide the others
 sub set_layers_visible {
     my $xpath = shift;
     my @toset = @_;
@@ -315,6 +284,48 @@ LAYER:
         $layer->{'style'} =~ s{\bdisplay:inline\b}{display:none};
     }
     return $numset;
+}
+
+# Show the layer-to-page mapping grid
+sub show_page_mapping {
+    my @lsets = @_;  # Sets of layers in page order: ([lb,l1], [lb,l2,l5], [l3,lb], ...)
+
+    # Print heading
+    my $pmax = scalar(@lsets);
+    if ($pmax > 99) {
+        print " " x 40;
+        for my $p (1..$pmax) {
+          print(int($p/100) || ".");
+        }
+        print "\n";
+    }
+    if ($pmax > 9) {
+        print " " x 40;
+        for my $p (1..$pmax) {
+          print((int($p/10) % 10) || ".");
+        }
+        print "\n";
+    }
+    print "  Layer Name                Page # -->  ";
+    for my $p (1..$pmax) {
+      print $p % 10;
+    }
+    print "\n";
+    say   "  ==================================== +" . ('=' x $pmax) . "+";
+
+    # Show mapping for ALL layers even those not in the layer set
+    my $pnum = 0;
+    foreach my $lname (@LAYERS) {
+        my $l36 = length($lname) <= 36 ? $lname
+                                       : substr($lname, 0, 35) . '…';
+        printf("  %-36s |", $l36);
+        for my $p (1..$pmax) {
+            my @lset = @{$lsets[$p-1]};
+            print((grep {$lname eq $_} @lset) ? '*' : '.');
+        }
+        print "|\n";
+    }
+    say   "  ==================================== +" . ('=' x $pmax) . "+";
 }
 
 __END__
