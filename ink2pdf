@@ -91,61 +91,28 @@ sub do_by_each {
     }
     return show_page_mapping(@lset) if $SHOWMAPPING;
 
-    say "Page Generation..." if $VERBOSE;
-    my $pnum      = 0;
-    my @pdf_files = ();
-    foreach my $layer (@LAYERS) {
-        next if $layer eq $BGLAYER;
-        ++$pnum;
-
-        # Create temp SVG with desired layers set
-        my $tmpfile = sprintf("$base-%3.3d.svg", $pnum);
-        say "  Temp SVG $tmpfile with layer '$layer' visible" if $VERBOSE;
-        my $n = set_layers_visible($xpath, $layer, $BGLAYER);
-        warn "--- No such layer: $layer\n" unless $n;
-        $xml->toFile($tmpfile);
-
-        # PDF generation
-        my $pdffile = sprintf("$base-%3.3d.pdf", $pnum);
-        push @pdf_files, $pdffile;
-        generate_pdf($tmpfile, $pdffile);
-        say "   --> PDF $pdffile generated" if $VERBOSE;
-
-        # Cleanup
-        unlink $tmpfile;
-    }
-
-    # Unify PDF's
-    if ($KEEP) {
-        say "Individual PDF files will be kept (-k)" if $VERBOSE;
-    }
-    else {
-        # ... unify ...
-        say "  Unifying pages" if $VERBOSE;
-        system("pdfunite " . join(" ", map {"'$_'"} @pdf_files) . " '" . $outfile . "'") == 0
-            or die "*** pdfunite command failure\n";
-        say "  Cleanup" if $VERBOSE;
-        unlink @pdf_files;
-        say "Created $outfile" if $VERBOSE;
-    }
+    # Generate the output
+    generate_all(@lset);
 }
 
 sub do_by_prefix {
+
+    # Find all prefixes
     my @prefixen = ();
+    say "Discovered Prefixen:" if $VERBOSE;
     foreach my $layer (@LAYERS) {
         next unless $layer =~ m{^\s* ([pbc])
                                      (\* | L | R | [0-9\.\-]+)?
                                      (?:\(([a-z0-9\-\,]+))?
                                      \) }ix;
-        push @prefixen, [lc $1, lc($2||q{}), lc($3||q{}), $layer];  # pbc, seq, ctag, layername
+        my $pset = [lc $1, lc($2||q{}), lc($3||q{}), $layer];  # pbc, seq, ctag, layername
+        push @prefixen, $pset;
+        say "  type: $pset->[0]  pages: ".($pset->[1]||q{--})."\ttags: ".($pset->[2]||q{--})."\tlayer: '$pset->[3]'"
+            if $VERBOSE;
     }
-
-#TEMP
-    say "Prefixen:";
-    foreach my $x (@prefixen) {
-        say "  type: $x->[0]  pages: ".($x->[1]||q{--})."\ttags: ".($x->[2]||q{--})."\tlayer: '$x->[3]'";
-    }
-#ENDTEMP
+    say "" if $VERBOSE;
+    die "*** No layer prefixes discovered -- output would be empty (don't use -x?)\n"
+        unless @prefixen;
 
     # Get content sequence numbers
     my @cseq = ();
@@ -192,7 +159,15 @@ sub do_by_prefix {
     return show_page_mapping(@l2p) if $SHOWMAPPING;
 
     # Generate output
-    $pnum = 0;
+    generate_all(@l2p);
+}
+
+# Generate all output
+sub generate_all {
+    my @l2p = @_;
+
+    say "Page Generation..." if $VERBOSE;
+    my $pnum = 0;
     my @pdf_files = ();
     foreach my $lset (@l2p) {
         ++$pnum;
@@ -227,7 +202,6 @@ sub do_by_prefix {
         unlink @pdf_files;
         say "Created $outfile" if $VERBOSE;
     }
-
 }
 
 # Create a one-page PDF
