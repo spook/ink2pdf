@@ -98,16 +98,19 @@ sub do_by_each {
 sub do_by_prefix {
 
     # Find all prefixes
+    my $seq_re = qr{ \* | L | R | [0-9\.\-]+ }ix;
+    my $tag_re = qr{ [a-z0-9\-]+ }ix;
     my @prefixen = ();
     say "Discovered Prefixen:" if $VERBOSE;
     foreach my $layer (@LAYERS) {
-        next unless $layer =~ m{^\s* ([pbc])
-                                     (\* | L | R | [0-9\.\-]+)?
-                                     (?:\(([a-z0-9\-\,]+))?
-                                     \) }ix;
+        next unless $layer =~ m{^\s* ([pbc])                                # Start char
+                                     ($seq_re (?: \, $seq_re)* )?           # Seqnums
+                                     (?: \( ($tag_re (?: \, $tag_re)* ) )?  # Optional tags
+                                         \)                                 # Required closing paren
+                               }ix;
         my $pset = [lc $1, lc($2||q{}), lc($3||q{}), $layer];  # pbc, seq, ctag, layername
         push @prefixen, $pset;
-        say "  type: $pset->[0]  pages: ".($pset->[1]||q{--})."\ttags: ".($pset->[2]||q{--})."\tlayer: '$pset->[3]'"
+        say "  type: $pset->[0]  seqs: ".($pset->[1]||q{--})."\ttags: ".($pset->[2]||q{--})."\tlayer: '$pset->[3]'"
             if $VERBOSE;
     }
     say "" if $VERBOSE;
@@ -115,25 +118,26 @@ sub do_by_prefix {
         unless @prefixen;
 
     # Get content sequence numbers
-    my @cseq = ();
+    my %cseqs = ();
     foreach my $x (@prefixen) {
-        next if $x->[0] eq 'b';               # skip forced background layers
+        next if $x->[0] eq 'b';                # skip forced background layers
         my $seq = $x->[1];
-        next unless $seq;                     # skip blank
-        next unless $seq =~ m{^[0-9\.,]+$};   # can't be bg layer
+        next unless $seq;                      # skip blank
+        next unless $seq =~ m{^[0-9\.\,]+$};   # can't be a b/g layer (no dash, no *, ...)
         foreach my $sq (split(/,/, $seq)) {
             if ($sq !~ m{^\d+(\.\d*)?$}) {
                 warn "--- Skip bad sequence number '$sq' in layer name '$x->[3]'\n";
                 next;
             }
-            push @cseq, $sq;
+            $cseqs{$sq}++;
         }
     }
+    my @cseq = sort {($a+0.0) <=> ($b+0.0)} keys %cseqs;  # Sorted numerically
 
     # Build layer-sets list
     my @l2p  = ();
     my $pnum = 1;
-    for my $sq (sort {($a+0.0) <=> ($b+0.0)} @cseq) {
+    for my $sq (@cseq) {   
 
         # Find all layers that match
         my $any = 0;
@@ -143,12 +147,12 @@ sub do_by_prefix {
                 if ($any) {
                     # Add to current page
                     push @{$l2p[-1]}, $lname;
-                    print("    + $lname\n");    ### TEMP
+#print("    + $lname\n");    ### TEMP
                 }
                 else {
                     # Start new page
                     push @l2p, [$lname];
-                    printf("%3.3d   %s\n", $pnum, $lname);    ### TEMP
+#printf("%3.3d   %s\n", $pnum, $lname);    ### TEMP
                     $any = 1;
                 }
             }
@@ -226,16 +230,18 @@ sub get_layers {
 
 # Does a given sequence match a sequence spec?
 sub seq_match {
-    my $sq = shift;
+    my $want = shift;
     my $spec = shift;
     my $pnum = shift;
 
-    return 1 if $spec eq '*';
-    return 1 if ($spec eq 'l') && ($pnum % 2) && ($pnum != 1);  # Left-side doesn't include p1
-    return 1 if ($spec eq 'r') && !($pnum % 2);
-    return 1 if $sq eq $spec;
+    foreach my $one (split(/,/, $spec)) {
+        return 1 if $one eq '*';
+        return 1 if ($one eq 'l') && ($pnum % 2) && ($pnum != 1);  # Left-side doesn't include p1
+        return 1 if ($one eq 'r') && !($pnum % 2);
+        return 1 if $one eq $want;
+        # TODO: Ranges
+    }
 
-    # TODO
     return 0;
 }
 
