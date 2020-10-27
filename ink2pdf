@@ -18,6 +18,7 @@ GetOptions($opts,
     "insert|i:s@",
     "keep|k",
     "show-layers|l",
+    "show-mapping|m",
     "output|o:s",
     "tags|t:s",
     "verbose|v",
@@ -35,13 +36,14 @@ pod2usage(
     -exitval => 2,                                    # 2 = ENOENT NO such file
     -message => "*** Missing Inkscape SVG filename"
 ) if !@ARGV;
-my $SVGFILE    = $ARGV[0];
-my $BGLAYER    = $opts->{background} || q{};
-my $KEEP       = $opts->{keep};
-my $SHOWLAYERS = $opts->{'show-layers'};
-my @CTAGS      = split(',', $opts->{tags} || q{});
-my $VERBOSE    = $opts->{verbose};
-my $XMODE      = $opts->{prefixes};
+my $SVGFILE     = $ARGV[0];
+my $BGLAYER     = $opts->{background} || q{};
+my $KEEP        = $opts->{keep};
+my $SHOWLAYERS  = $opts->{'show-layers'};
+my $SHOWMAPPING = $opts->{'show-mapping'};
+my @CTAGS       = split(',', $opts->{tags} || q{});
+my $VERBOSE     = $opts->{verbose};
+my $XMODE       = $opts->{prefixes};
 die "*** Conditional tags may only be used with --prefixes (-x)\n"
     if @CTAGS && !$XMODE;
 
@@ -65,8 +67,10 @@ if ($VERBOSE || $SHOWLAYERS) {
     exit 0 if $SHOWLAYERS;
 }
 if ($BGLAYER) {
-    warn "--- Background layer not found: $BGLAYER\n"
-        unless grep {$_ eq $BGLAYER} @LAYERS;
+    unless (grep {$_ eq $BGLAYER} @LAYERS) {
+        warn "--- Background layer not found: '$BGLAYER'\n";
+        $BGLAYER = q{};
+    }
 }
 
 $XMODE
@@ -79,7 +83,47 @@ exit 0;
 #                           ------- o -------
 #
 
+sub show_mapping_each {
+    my $pmax = scalar(@LAYERS) - ($BGLAYER? 1 : 0);
+    if ($pmax > 99) {
+        print " " x 40;
+        for my $p (1..$pmax) {
+          print(int($p/100) || ".");
+        }
+        print "\n";
+    }
+    if ($pmax > 9) {
+        print " " x 40;
+        for my $p (1..$pmax) {
+          print((int($p/10) % 10) || ".");
+        }
+        print "\n";
+    }
+    print "  Layer                     Page # -->  ";
+    for my $p (1..$pmax) {
+      print $p % 10;
+    }
+    print "\n";
+    say   "  ==================================== +" . ('=' x $pmax) . "+";
+    my $pnum = 0;
+    foreach my $layer (@LAYERS) {
+        printf("  %-36s |", substr($layer, 0, 36));
+        if ($layer eq $BGLAYER) {
+            print("*" x $pmax);
+        }
+        else {
+            ++$pnum;
+            print "." x ($pnum-1);
+            print "*";
+            print "." x ($pmax-$pnum);
+        }
+        print "|\n";
+    }
+    say   "  ==================================== +" . ('=' x $pmax) . "+";
+}
+
 sub do_by_each {
+    return show_mapping_each if $SHOWMAPPING;
     say "Page Generation..." if $VERBOSE;
 
     my $pnum      = 0;
@@ -99,7 +143,7 @@ sub do_by_each {
         my $pdffile = sprintf("$base-%3.3d.pdf", $pnum);
         push @pdf_files, $pdffile;
         generate_pdf($tmpfile, $pdffile);
-        say "  Temp PDF $pdffile generated" if $VERBOSE;
+        say "   --> PDF $pdffile generated" if $VERBOSE;
 
         # Cleanup
         unlink $tmpfile;
@@ -126,7 +170,7 @@ sub do_by_prefix {
                                      (\* | L | R | [0-9\.\-]+)?
                                      (?:\(([a-z0-9\-\,]+))?
                                      \) }ix;
-        push @prefixen, [lc $1, lc($2)||q{}, lc($3)||q{}, $layer];  # pbc, seq, ctag, layername
+        push @prefixen, [lc $1, lc($2||q{}), lc($3||q{}), $layer];  # pbc, seq, ctag, layername
     }
 
 #TEMP
@@ -196,7 +240,7 @@ sub do_by_prefix {
         my $pdffile = sprintf("$base-%3.3d.pdf", $pnum);
         push @pdf_files, $pdffile;
         generate_pdf($tmpfile, $pdffile);
-        say "  Temp PDF $pdffile generated" if $VERBOSE;
+        say "   --> PDF $pdffile generated" if $VERBOSE;
 
         # Cleanup
         unlink $tmpfile;
@@ -288,6 +332,7 @@ ink2pdf - Inkscape to Multi-Page PDF Document
   -k  --keep           Don't unite the pages into one PDF; keep each page 
                          as it's own numbered .pdf file
   -l  --show-layers    Show layer names and exit
+  -m  --show-mapping   Show layer-to-page mapping and exit
   -o  --output PDFFILE Specify the output PDF file name; default is to 
                          replace the ".svg" suffix of the input file name 
                          with ".pdf"; if no ".svg" suffix then ".pdf" is 
