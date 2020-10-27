@@ -4,12 +4,6 @@ Inkscape to Multi-Page PDF Document
 **INITIAL PROJECT - DRAFT - NOT YET READY**
 
 Generates a multi-page PDF document from your Inkscape document.
-Includes other Inkscape layer tools:
-
--  ink2png   - Like ink2pdf but output a set of numbered PNG files
--  ink2jpg   - Like ink2pdf but output a set of numbered JPEG files
--  inklayers - List, show (set visible, unhide), and hide layers
--  inkpages  - Display the page structure in an Inkscape document.
 
 ## Multiple Pages.. In Inkscape?
 
