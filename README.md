@@ -207,7 +207,7 @@ Then mke it executable:  `chmod +x /usr/local/bin/ink2pdf` .  That's it!
                              can use multiple times
       -k  --keep           Don't unite the pages into one PDF; keep each page 
                              as it's own numbered .pdf file
-      -l  --show-layers    Show layer names and exit
+      -l  --list-layers    List all layer names and exit
       -m  --show-mapping   Show layer-to-page mapping and exit
       -o  --output PDFFILE Specify the output PDF file name; default is to 
                              replace the ".svg" suffix of the input file name 
