@@ -1,5 +1,19 @@
 # TO DO
 
+## Yeah, do it...
+
+* Other output formats: 
+PNG, JPG, PS etc.  As a collection of single page images.
+Also include option to tar/zip them together?
+
+* --quiet -q option
+By default the tools outputs nothing.  The typical user
+won't be a coder/devo where this is normal; they'd likely
+interpret no output as "its stuck" or it did nothing.
+So: Make three levels of output -- quiet, normal, verbose.
+The middle one gives minimal output but still *something*
+so the user knows what's going on.
+
 ## Under Consideration
 
 * --pages -p M:N
@@ -20,12 +34,6 @@ the Inkscape binary?
 * Windows install
 Yuck... Winderz.  Need instructions to make this work on
 Windows, perhaps a VM to test it too.  What about MacOS too?
-
-## Yeah, do it...
-
-* Other output formats: 
-PNG, JPG, PS etc.  As a collection of single page images.
-Also include option to tar/zip them together?
 
 ## What I really want...
 
