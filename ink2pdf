@@ -230,23 +230,38 @@ sub generate_all {
     }
     else {
         say "  Unifying pages" if $VERBOSE;
+        my @my_pdf_files = @pdf_files;  # So we don't delete the inserted files
 
         # Inserted pages
         foreach my $ins (@$INSERT) {
             my ($atpage, $file) = split(/:/, $ins, 2);
-            if ($atpage =~ m{^\d+$/}) {
+            if ($atpage =~ m{^end$}i) {
+                $atpage = @pdf_files + 1;
+            }
+            elsif ($atpage !~ m{^\d+$}) {
                 warn "--- Insertion skipped; Invalid page number: $ins\n";
                 next;
             }
-            say "  Inserting '$file' at page $atpage" if $VERBOSE;
+            if ($atpage < 1) {
+                warn "--- Insertion page before first page; will change to first page: $ins\n";
+                $atpage = 1;
+            }
+            elsif ($atpage > @pdf_files+1) {
+                warn "--- Insertion page after end; will change to last page: $ins\n";
+                $atpage = @pdf_files + 1;
+            }
+            say "  Insert '$file' at page $atpage" if $VERBOSE;
             splice @pdf_files, $atpage-1, 0, $file;
         }
 
         # ... unify ...
-        system("pdfunite " . join(" ", map {"'$_'"} @pdf_files) . " '" . $outfile . "'") == 0
-            or die "*** pdfunite command failure\n";
+        if (system("pdfunite " . join(" ", map {"'$_'"} @pdf_files) . " '" . $outfile . "'") != 0) {
+            unlink @my_pdf_files;
+            die "*** pdfunite command failure\n";
+        }
+
         say "  Cleanup" if $VERBOSE;
-        unlink @pdf_files;
+        unlink @my_pdf_files;
         say "Created $outfile" if $VERBOSE;
     }
 }
@@ -371,7 +386,10 @@ ink2pdf - Inkscape to Multi-Page PDF Document
   -b  --background L   Use layer L as a backround layer (cannot use with -x).
   -h  --help           Usage summary.
   -i  --insert N:file  Insert existing PDF file into document at page N; 
-                         can use multiple times. Ignored when using -k.
+                         can use multiple times.  N starts at 1; 1 will
+                         make the inserted PDF file be at the beginning.
+                         Can use "end" for N to insert at the end of the 
+                         document.  Ignored when using -k.
   -k  --keep           Don't unite the pages into one PDF; keep each page 
                          as it's own numbered .pdf file.
   -l  --list-layers    Show layer names and exit.

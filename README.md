@@ -202,21 +202,26 @@ Then mke it executable:  `chmod +x /usr/local/bin/ink2pdf` .  That's it!
      ink2pdf [options] inkscape-file
 
      Options:
-      -b  --background L   Use layer L as a backround layer (cannot use with -x)
-      -h  --help           Usage summary
+      -b  --background L   Use layer L as a backround layer (cannot use with -x).
+      -h  --help           Usage summary.
       -i  --insert N:file  Insert existing PDF file into document at page N; 
-                             can use multiple times
+                             can use multiple times.  N starts at 1; 1 will
+                             make the inserted PDF file be at the beginning.
+                             Can use "end" for N to insert at the end of the 
+                             document.  Ignored when using -k.
       -k  --keep           Don't unite the pages into one PDF; keep each page 
-                             as it's own numbered .pdf file
-      -l  --list-layers    List all layer names and exit
-      -m  --show-mapping   Show layer-to-page mapping and exit
+                             as it's own numbered .pdf file.
+      -l  --list-layers    Show layer names and exit.
+      -m  --show-mapping   Show layer-to-page mapping and exit.
       -o  --output PDFFILE Specify the output PDF file name; default is to 
                              replace the ".svg" suffix of the input file name 
                              with ".pdf"; if no ".svg" suffix then ".pdf" is 
                              appended.
-      -t  --tags TAGS      Conditional tags in effect; separate tags with commas
-      -x  --prefixes       Parse prefixes in layer names
-      -v  --verbose        Verbose mode
+      -t  --tags TAGS      Conditional tags in effect; separate tags with commas.
+                             Tags only processed when using prefixes; thus
+                             you must use -x too when using -t. 
+      -x  --prefixes       Parse prefixes in layer names.
+      -v  --verbose        Verbose mode.
 ```
 
 ## Credits
