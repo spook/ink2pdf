@@ -263,15 +263,19 @@ sub seq_match {
     my $spec = shift;
     my $pnum = shift;
 
-    foreach my $one (split(/,/, $spec)) {
-        return 1 if $one eq '*';
-        return 1 if ($one eq 'l') && ($pnum % 2) && ($pnum != 1);    # Left-side doesn't include p1
-        return 1 if ($one eq 'r') && !($pnum % 2);
-        return 1 if $one eq $want;
-
-        # TODO: Ranges
+    foreach my $part (split(/,/, $spec)) {
+        return 1 if $part eq '*';
+        return 1 if ($part eq 'l') && ($pnum % 2) && ($pnum != 1);    # Left-side doesn't include p1
+        return 1 if ($part eq 'r') && !($pnum % 2);
+        return 1 if $part eq $want;
+        if ($part =~ m{-}) {
+            my ($m, $n) = split(/-/, $part, 2);
+            next if ($m eq '') && ($n eq '');   # We got just a dash without either side
+            next if ($m ne '') && ($want < $m); # numerical compare
+            next if ($n ne '') && ($want > $n); # numerical compare
+            return 1;
+        }
     }
-
     return 0;
 }
 
