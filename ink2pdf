@@ -82,6 +82,20 @@ exit 0;
 #                           ------- o -------
 #
 
+# Check if there's an intersection between two lists of strings
+sub any_match {
+    my @a = ref $_[0]? @{$_[0]} : split(/,/, $_[0]);
+    my @b = ref $_[1]? @{$_[1]} : split(/,/, $_[1]);
+    foreach my $a (@a) {
+        next unless defined $a && $a ne q{};
+        foreach my $b (@b) {
+            next unless defined $b && $b ne q{};
+            return 1 if lc($a) eq lc($b);
+        }
+    }
+    return 0;
+}
+
 # Do all layers: Simply map each layer to a page (with a b/g option)
 sub do_all_layers {
 
@@ -104,6 +118,10 @@ sub do_by_prefix {
     my $seq_re   = qr{ \* | L | R | [0-9\.\-]+ }ix;
     my $tag_re   = qr{ [a-z0-9\-]+ }ix;
     my @prefixen = ();
+    use constant PST_CHR => 0;
+    use constant PST_SEQ => 1;
+    use constant PST_TAG => 2;
+    use constant PST_NAM => 3;
     say "Discovered Prefixen:" if $VERBOSE;
     foreach my $layer (@LAYERS) {
         next unless $layer =~ m{^\s* ([pbc])                                # Start char
@@ -113,16 +131,23 @@ sub do_by_prefix {
                                }ix;
         my $pset = [lc $1, lc($2 || q{}), lc($3 || q{}), $layer];    # pbc, seq, ctag, layername
         push @prefixen, $pset;
-        say "  type: $pset->[0]  seqs: "
-            . ($pset->[1] || q{--})
+        say "  type: $pset->[PST_CHR]  seqs: "
+            . ($pset->[PST_SEQ] || q{--})
             . "\ttags: "
-            . ($pset->[2] || q{--})
-            . "\tlayer: '$pset->[3]'"
+            . ($pset->[PST_TAG] || q{--})
+            . "\tlayer: '$pset->[PST_NAM]'"
             if $VERBOSE;
     }
     say "" if $VERBOSE;
     die "*** No layer prefixes discovered -- output would be empty (don't use -x?)\n"
         unless @prefixen;
+
+    # If conditional tags given, toss out layers that don't match
+    if (@CTAGS) {
+        @prefixen = grep {
+            !$_->[PST_TAG] || any_match(\@CTAGS, $_->[PST_TAG])            
+            } @prefixen;
+    }
 
     # Get content sequence numbers
     my %cseqs = ();

@@ -98,8 +98,6 @@ content layer then the background layer is ignored.
 
 ### Conditional Tags
 
-**NOT YET IMPLEMENTED**
-
 Layers may be tagged with short identifiers, called *conditional tags* (ctags).
 When running `ink2pdf` the ctags may be specified with the `--tags` (-t) option.
 Ctags are used to enable and disable layers on output.  If a layer has a ctag,
