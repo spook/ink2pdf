@@ -1,8 +1,4 @@
 # ink2pdf
-Inkscape to Multi-Page PDF Document
-
-**INITIAL PROJECT - DRAFT - NOT YET READY**
-
 Generates a multi-page PDF document from your Inkscape document.
 
 ## Multiple Pages.. In Inkscape?
@@ -87,14 +83,15 @@ They can have a single number like a content page, or a list of numbers,
 or they can indicate a range (2-5), or they can be a special character as
 follows:
 
-    b1)     Background for page 1 - note the "b"
-    b4,8)   Background layer for pages 4 and 8 - lists are allowed - note the "b"
-    p2-10)  Background for pages 2 thru 10 inclusive.  The use of a range forces this to be a background layer.
-    p2-)    Background for page 2 and up.
-    p-50)   Background for all pages up to and including 50
-    p*)     Background layer for all pages
-    pL)     Background layer for left-side (even) output pages - does not include page 1 (intentional)
-    pR)     Background layer for right-side (odd) output pages
+    b1)        Background for page 1 - note the "b"
+    b4,8)      Background layer for pages 4 and 8 - lists are allowed - note the "b"
+    p2-10)     Background for pages 2 thru 10 inclusive.  The use of a range forces this to be a background layer.
+    p2-)       Background for page 2 and up.
+    p-50)      Background for all pages up to and including 50
+    p*)        Background layer for all pages
+    pL)        Background layer for left-side (even) output pages - does not include page 1 (intentional)
+    pR)        Background layer for right-side (odd) output pages
+    p1,L,9-13) Complicated example!
     
 A background layer is used with a content layer; if there's no matching
 content layer then the background layer is ignored.
