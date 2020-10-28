@@ -48,7 +48,7 @@ die "*** Conditional tags may only be used with --prefixes (-x)\n"
     if @CTAGS && !$XMODE;
 
 # Load file
-my $xml = XML::LibXML->load_xml(location => $SVGFILE);
+my $xml   = XML::LibXML->load_xml(location => $SVGFILE);
 my $xpath = XML::LibXML::XPathContext->new($xml);
 $xpath->registerNs("defNs", 'http://www.w3.org/2000/svg');
 
@@ -71,9 +71,10 @@ if ($BGLAYER) {
     }
 }
 
+# Generate the PDF's
 $XMODE
     ? do_by_prefix()
-    : do_by_each();
+    : do_all_layers();
 
 exit 0;
 
@@ -81,7 +82,8 @@ exit 0;
 #                           ------- o -------
 #
 
-sub do_by_each {
+# Do all layers: Simply map each layer to a page (with a b/g option)
+sub do_all_layers {
 
     # Create layer set
     my @lset = ();
@@ -95,11 +97,12 @@ sub do_by_each {
     generate_all(@lset);
 }
 
+# Create pages as indicated by layer prefixes
 sub do_by_prefix {
 
     # Find all prefixes
-    my $seq_re = qr{ \* | L | R | [0-9\.\-]+ }ix;
-    my $tag_re = qr{ [a-z0-9\-]+ }ix;
+    my $seq_re   = qr{ \* | L | R | [0-9\.\-]+ }ix;
+    my $tag_re   = qr{ [a-z0-9\-]+ }ix;
     my @prefixen = ();
     say "Discovered Prefixen:" if $VERBOSE;
     foreach my $layer (@LAYERS) {
@@ -108,9 +111,13 @@ sub do_by_prefix {
                                      (?: \( ($tag_re (?: \, $tag_re)* ) )?  # Optional tags
                                          \)                                 # Required closing paren
                                }ix;
-        my $pset = [lc $1, lc($2||q{}), lc($3||q{}), $layer];  # pbc, seq, ctag, layername
+        my $pset = [lc $1, lc($2 || q{}), lc($3 || q{}), $layer];    # pbc, seq, ctag, layername
         push @prefixen, $pset;
-        say "  type: $pset->[0]  seqs: ".($pset->[1]||q{--})."\ttags: ".($pset->[2]||q{--})."\tlayer: '$pset->[3]'"
+        say "  type: $pset->[0]  seqs: "
+            . ($pset->[1] || q{--})
+            . "\ttags: "
+            . ($pset->[2] || q{--})
+            . "\tlayer: '$pset->[3]'"
             if $VERBOSE;
     }
     say "" if $VERBOSE;
@@ -120,10 +127,10 @@ sub do_by_prefix {
     # Get content sequence numbers
     my %cseqs = ();
     foreach my $x (@prefixen) {
-        next if $x->[0] eq 'b';                # skip forced background layers
+        next if $x->[0] eq 'b';    # skip forced background layers
         my $seq = $x->[1];
-        next unless $seq;                      # skip blank
-        next unless $seq =~ m{^[0-9\.\,]+$};   # can't be a b/g layer (no dash, no *, ...)
+        next unless $seq;                       # skip blank
+        next unless $seq =~ m{^[0-9\.\,]+$};    # can't be a b/g layer (no dash, no *, ...)
         foreach my $sq (split(/,/, $seq)) {
             if ($sq !~ m{^\d+(\.\d*)?$}) {
                 warn "--- Skip bad sequence number '$sq' in layer name '$x->[3]'\n";
@@ -132,27 +139,25 @@ sub do_by_prefix {
             $cseqs{$sq}++;
         }
     }
-    my @cseq = sort {($a+0.0) <=> ($b+0.0)} keys %cseqs;  # Sorted numerically
+    my @cseq = sort {$a <=> $b} keys %cseqs;    # Sorted numerically
 
     # Build layer-sets list
     my @l2p  = ();
     my $pnum = 1;
-    for my $sq (@cseq) {   
+    for my $sq (@cseq) {
 
         # Find all layers that match
         my $any = 0;
         foreach my $x (@prefixen) {
-            if (seq_match($sq, $x->[1], $pnum)) {  # TODO: ctag match
+            if (seq_match($sq, $x->[1], $pnum)) {               # TODO: ctag match
                 my $lname = $x->[3];
                 if ($any) {
                     # Add to current page
                     push @{$l2p[-1]}, $lname;
-#print("    + $lname\n");    ### TEMP
                 }
                 else {
                     # Start new page
                     push @l2p, [$lname];
-#printf("%3.3d   %s\n", $pnum, $lname);    ### TEMP
                     $any = 1;
                 }
             }
@@ -171,7 +176,7 @@ sub generate_all {
     my @l2p = @_;
 
     say "Page Generation..." if $VERBOSE;
-    my $pnum = 0;
+    my $pnum      = 0;
     my @pdf_files = ();
     foreach my $lset (@l2p) {
         ++$pnum;
@@ -227,7 +232,6 @@ sub get_layers {
     return @labels;
 }
 
-
 # Does a given sequence match a sequence spec?
 sub seq_match {
     my $want = shift;
@@ -236,9 +240,10 @@ sub seq_match {
 
     foreach my $one (split(/,/, $spec)) {
         return 1 if $one eq '*';
-        return 1 if ($one eq 'l') && ($pnum % 2) && ($pnum != 1);  # Left-side doesn't include p1
+        return 1 if ($one eq 'l') && ($pnum % 2) && ($pnum != 1);    # Left-side doesn't include p1
         return 1 if ($one eq 'r') && !($pnum % 2);
         return 1 if $one eq $want;
+
         # TODO: Ranges
     }
 
@@ -268,44 +273,46 @@ LAYER:
 
 # Show the layer-to-page mapping grid
 sub show_page_mapping {
-    my @lsets = @_;  # Sets of layers in page order: ([lb,l1], [lb,l2,l5], [l3,lb], ...)
+    my @lsets = @_;    # Sets of layers in page order: ([lb,l1], [lb,l2,l5], [l3,lb], ...)
 
     # Print heading
     my $pmax = scalar(@lsets);
     if ($pmax > 99) {
         print " " x 40;
-        for my $p (1..$pmax) {
-          print(int($p/100) || ".");
+        for my $p (1 .. $pmax) {
+            print(int($p / 100) || ".");
         }
         print "\n";
     }
     if ($pmax > 9) {
         print " " x 40;
-        for my $p (1..$pmax) {
-          print((int($p/10) % 10) || ".");
+        for my $p (1 .. $pmax) {
+            print((int($p / 10) % 10) || ".");
         }
         print "\n";
     }
     print "  Layer Name                Page # -->  ";
-    for my $p (1..$pmax) {
-      print $p % 10;
+    for my $p (1 .. $pmax) {
+        print $p % 10;
     }
     print "\n";
-    say   "  ==================================== +" . ('=' x $pmax) . "+";
+    say "  ==================================== +" . ('=' x $pmax) . "+";
 
     # Show mapping for ALL layers even those not in the layer set
     my $pnum = 0;
     foreach my $lname (@LAYERS) {
-        my $l36 = length($lname) <= 36 ? $lname
-                                       : substr($lname, 0, 35) . '…';
+        my $l36
+            = length($lname) <= 36
+            ? $lname
+            : substr($lname, 0, 35) . '…';
         printf("  %-36s |", $l36);
-        for my $p (1..$pmax) {
-            my @lset = @{$lsets[$p-1]};
+        for my $p (1 .. $pmax) {
+            my @lset = @{$lsets[$p - 1]};
             print((grep {$lname eq $_} @lset) ? '*' : '.');
         }
         print "|\n";
     }
-    say   "  ==================================== +" . ('=' x $pmax) . "+";
+    say "  ==================================== +" . ('=' x $pmax) . "+";
 }
 
 __END__
