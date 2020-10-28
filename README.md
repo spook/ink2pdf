@@ -118,6 +118,71 @@ Multiple ctags are allowed in the prefix:
 
 Conditional tags are processed only in --prefixes (-x) mode.
 
+## Listing Layers
+
+Use the --list-layers (-l) option to list all the layer names in the inkscape document:
+```
+    ink2pdf -l test/inkfiles/layer-test-001.svg 
+    BG
+    Layer 1
+    Layer 2
+    Layer 3
+
+```
+
+## Show Layer-to-Page Mapping
+
+Use the --show-mappings (-m) option to show the layer-to-page mappings
+that `ink2pdf` would use when it creates the PDF pages.  The output
+is shown in a grid format with the output page numbers listed (vertically)
+across the top, and the layer names on the left side of the table.
+An asterix (*) in the grid indicates that the layer will be used
+on that page.
+```
+  $ ink2pdf -m test/inkfiles/prefix-test-010.svg
+                                        .........11111
+  Layer Name                Page # -->  12345678901234
+  ==================================== +==============+
+  p*) My Background                    |*.............|
+  pR) Right-side frame                 |.*............|
+  pL) Left-side frame                  |..*...........|
+  p1) Cover Page                       |...*..........|
+  p003) Page 3                         |....*.........|
+  p2(fr) Introduction                  |.....*........|
+  p2(en) Introduction                  |......*.......|
+  b3) BG just for page 3               |.......*......|
+  c4) Ordinary Stuff                   |........*.....|
+  c4.7(ex,en) Experimental Stuff       |.........*....|
+  p5.05) More stuff                    |..........*...|
+  p4-6) BG for 4,5,6                   |...........*..|
+  c7) End Page                         |............*.|
+  c6) Just content                     |.............*|
+  ==================================== +==============+
+```
+Note the difference when layer prefixes (-x) are used or not:
+```
+  $ ink2pdf test/inkfiles/prefix-test-010.svg  -m -x
+  Layer Name                Page # -->  12345678
+  ==================================== +========+
+  p*) My Background                    |********|
+  pR) Right-side frame                 |.*.*.*.*|
+  pL) Left-side frame                  |..*.*.*.|
+  p1) Cover Page                       |*.......|
+  p003) Page 3                         |..*.....|
+  p2(fr) Introduction                  |.*......|
+  p2(en) Introduction                  |.*......|
+  b3) BG just for page 3               |........|
+  c4) Ordinary Stuff                   |...*....|
+  c4.7(ex,en) Experimental Stuff       |....*...|
+  p5.05) More stuff                    |.....*..|
+  p4-6) BG for 4,5,6                   |...****.|
+  c7) End Page                         |.......*|
+  c6) Just content                     |......*.|
+  ==================================== +========+
+
+```
+
+
 ## INSTALLATION
 
 ### Prerequisites
