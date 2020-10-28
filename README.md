@@ -204,11 +204,11 @@ Then mke it executable:  `chmod +x /usr/local/bin/ink2pdf` .  That's it!
      Options:
       -b  --background L   Use layer L as a backround layer (cannot use with -x).
       -h  --help           Usage summary.
-      -i  --insert N:file  Insert existing PDF file into document at page N; 
-                             can use multiple times.  N starts at 1; 1 will
-                             make the inserted PDF file be at the beginning.
-                             Can use "end" for N to insert at the end of the 
-                             document.  Ignored when using -k.
+      -i  --insert N:file  Insert existing PDF file into document at page N.
+                             May use multiple times.  N starts at 1.
+                             1 will insert the PDF file be at the beginning.
+                             Use "end" to insert at the end of the document.
+                             Ignored when using -k.
       -k  --keep           Don't unite the pages into one PDF; keep each page 
                              as it's own numbered .pdf file.
       -l  --list-layers    Show layer names and exit.
