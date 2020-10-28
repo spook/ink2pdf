@@ -182,6 +182,7 @@ Note the difference when layer prefixes (-x) are used:
 
 ```
 
+Note: Inserted PDF's (via the --insert -i option) are not shown in the mapping grid.
 
 ## INSTALLATION
 
@@ -220,4 +221,6 @@ Then mke it executable:  `chmod +x /usr/local/bin/ink2pdf` .  That's it!
 
 ## Credits
 
-Thanx to https://graphicdesign.stackexchange.com/questions/54615/inkscape-scripting-how-to-show-hide-a-layer-and-export#54990 for the parsing hint.
+Thanx to https://graphicdesign.stackexchange.com/questions/54615/inkscape-scripting-how-to-show-hide-a-layer-and-export#54990 
+for the parsing hint.
+

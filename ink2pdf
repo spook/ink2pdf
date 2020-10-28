@@ -17,7 +17,7 @@ GetOptions($opts,
     "help|h",
     "insert|i:s@",
     "keep|k",
-    "show-layers|l",
+    "list-layers|l",
     "show-mapping|m",
     "output|o:s",
     "tags|t:s",
@@ -39,7 +39,8 @@ pod2usage(
 my $SVGFILE     = $ARGV[0];
 my $BGLAYER     = $opts->{background} || q{};
 my $KEEP        = $opts->{keep};
-my $SHOWLAYERS  = $opts->{'show-layers'};
+my $INSERT      = $opts->{insert} || [];
+my $LISTLAYERS  = $opts->{'list-layers'};
 my $SHOWMAPPING = $opts->{'show-mapping'};
 my @CTAGS       = split(',', $opts->{tags} || q{});
 my $VERBOSE     = $opts->{verbose};
@@ -60,7 +61,7 @@ my $outfile = $opts->{output} || "$base.pdf";
 # Get layer names
 my @LAYERS = get_layers($xpath);
 die "*** No layers in file $SVGFILE\n" unless @LAYERS;
-if ($SHOWLAYERS) {
+if ($LISTLAYERS) {
     print map {"$_\n"} @LAYERS;
     exit 0;
 }
@@ -228,8 +229,20 @@ sub generate_all {
         say "Individual PDF files will be kept (-k)" if $VERBOSE;
     }
     else {
-        # ... unify ...
         say "  Unifying pages" if $VERBOSE;
+
+        # Inserted pages
+        foreach my $ins (@$INSERT) {
+            my ($atpage, $file) = split(/:/, $ins, 2);
+            if ($atpage =~ m{^\d+$/}) {
+                warn "--- Insertion skipped; Invalid page number: $ins\n";
+                next;
+            }
+            say "  Inserting '$file' at page $atpage" if $VERBOSE;
+            splice @pdf_files, $atpage-1, 0, $file;
+        }
+
+        # ... unify ...
         system("pdfunite " . join(" ", map {"'$_'"} @pdf_files) . " '" . $outfile . "'") == 0
             or die "*** pdfunite command failure\n";
         say "  Cleanup" if $VERBOSE;
@@ -355,21 +368,23 @@ ink2pdf - Inkscape to Multi-Page PDF Document
  ink2pdf [options] inkscape-file
 
  Options:
-  -b  --background L   Use layer L as a backround layer (cannot use with -x)
-  -h  --help           Usage summary
+  -b  --background L   Use layer L as a backround layer (cannot use with -x).
+  -h  --help           Usage summary.
   -i  --insert N:file  Insert existing PDF file into document at page N; 
-                         can use multiple times
+                         can use multiple times. Ignored when using -k.
   -k  --keep           Don't unite the pages into one PDF; keep each page 
-                         as it's own numbered .pdf file
-  -l  --show-layers    Show layer names and exit
-  -m  --show-mapping   Show layer-to-page mapping and exit
+                         as it's own numbered .pdf file.
+  -l  --list-layers    Show layer names and exit.
+  -m  --show-mapping   Show layer-to-page mapping and exit.
   -o  --output PDFFILE Specify the output PDF file name; default is to 
                          replace the ".svg" suffix of the input file name 
                          with ".pdf"; if no ".svg" suffix then ".pdf" is 
                          appended.
-  -t  --tags TAGS      Conditional tags in effect; separate tags with commas
-  -x  --prefixes       Parse prefixes in layer names
-  -v  --verbose        Verbose mode
+  -t  --tags TAGS      Conditional tags in effect; separate tags with commas.
+                         Tags only processed when using prefixes; thus
+                         you must use -x too when using -t. 
+  -x  --prefixes       Parse prefixes in layer names.
+  -v  --verbose        Verbose mode.
 
 =head1 DESCRIPTION
 
