@@ -98,6 +98,8 @@ content layer then the background layer is ignored.
 
 ### Conditional Tags
 
+**NOT YET IMPLEMENTED**
+
 Layers may be tagged with short identifiers, called *conditional tags* (ctags).
 When running `ink2pdf` the ctags may be specified with the `--tags` (-t) option.
 Ctags are used to enable and disable layers on output.  If a layer has a ctag,
@@ -138,6 +140,7 @@ Conditional tags are processed only in --prefixes (-x) mode.
       -k  --keep           Don't unite the pages into one PDF; keep each page 
                              as it's own numbered .pdf file
       -l  --show-layers    Show layer names and exit
+      -m  --show-mapping   Show layer-to-page mapping and exit
       -o  --output PDFFILE Specify the output PDF file name; default is to 
                              replace the ".svg" suffix of the input file name 
                              with ".pdf"; if no ".svg" suffix then ".pdf" is 
@@ -145,29 +148,6 @@ Conditional tags are processed only in --prefixes (-x) mode.
       -t  --tags TAGS      Conditional tags in effect; separate tags with commas
       -x  --prefixes       Parse prefixes in layer names
       -v  --verbose        Verbose mode
-```
-
-## inklayers Usage
-```
-inklayers [options] inkscape-file
-
-With no options, displays the layer names (the "labels") of all layers in the file.
-Use --verbose (-v) to show even more information.
-
-The --show LAYER option unhides the named layer, and hides all others unless the --keep option is also specified.
-The --show option may be used multiple times to make multiple layers visible.
-Use --show * to set all layers visible.
-
-The --hide LAYER option hides the named layer.  This option may be repeated.
-
-```
-
-## inkpages Usage
-```
-inkpages [options] inkscape-file
-
-Shows the page structure that ink2pdf would use when parsing the inkscape file.
-
 ```
 
 ## Credits
