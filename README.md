@@ -159,7 +159,7 @@ on that page.
   c6) Just content                     |.............*|
   ==================================== +==============+
 ```
-Note the difference when layer prefixes (-x) are used or not:
+Note the difference when layer prefixes (-x) are used:
 ```
   $ ink2pdf test/inkfiles/prefix-test-010.svg  -m -x
   Layer Name                Page # -->  12345678
@@ -190,6 +190,11 @@ Note the difference when layer prefixes (-x) are used or not:
 * pdfunite
 * Perl module XML::LibXML
 * Perl module XML::LibXML::XPathContext
+
+### How to Install
+
+Put the `ink2pdf` script somwehere in your executable path; for example, copy it to `/usr/local/bin/` .
+Then mke it executable:  `chmod +x /usr/local/bin/ink2pdf` .  That's it!
 
 ## ink2pdf Usage
 ```
