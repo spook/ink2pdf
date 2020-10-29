@@ -202,7 +202,7 @@ Then mke it executable:  `chmod +x /usr/local/bin/ink2pdf` .  That's it!
      ink2pdf [options] inkscape-file
 
      Options:
-      -b  --background L   Use layer L as a backround layer (cannot use with -x).
+      -b  --background L   Use layer L as a backround layer (can't use with -x).
       -h  --help           Usage summary.
       -i  --insert N:file  Insert existing PDF file into document at page N.
                              May use multiple times.  N starts at 1.
@@ -217,11 +217,12 @@ Then mke it executable:  `chmod +x /usr/local/bin/ink2pdf` .  That's it!
                              replace the ".svg" suffix of the input file name 
                              with ".pdf"; if no ".svg" suffix then ".pdf" is 
                              appended.
-      -t  --tags TAGS      Conditional tags in effect; separate tags with commas.
+      -q  --quiet          No output except warnings and errors.
+      -t  --tags TAGS      Conditional tags in effect; delimit tags with commas.
                              Tags only processed when using prefixes; thus
                              you must use -x too when using -t. 
       -x  --prefixes       Parse prefixes in layer names.
-      -v  --verbose        Verbose mode.
+      -v  --verbose        Verbose mode.  Overrides -q.
 ```
 
 ## Credits

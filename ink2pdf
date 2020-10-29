@@ -20,6 +20,7 @@ GetOptions($opts,
     "list-layers|l",
     "show-mapping|m",
     "output|o:s",
+    "quiet|q",
     "tags|t:s",
     "verbose|v",
     "prefixes|x",
@@ -43,8 +44,11 @@ my $INSERT      = $opts->{insert} || [];
 my $LISTLAYERS  = $opts->{'list-layers'};
 my $SHOWMAPPING = $opts->{'show-mapping'};
 my @CTAGS       = split(',', $opts->{tags} || q{});
-my $VERBOSE     = $opts->{verbose};
-my $XMODE       = $opts->{prefixes};
+my $VERBOSE
+    = $opts->{verbose} ? 2
+    : $opts->{quiet}   ? 0
+    :                    1;
+my $XMODE = $opts->{prefixes};
 die "*** Conditional tags may only be used with --prefixes (-x)\n"
     if @CTAGS && !$XMODE;
 
@@ -85,8 +89,8 @@ exit 0;
 
 # Check if there's an intersection between two lists of strings
 sub any_match {
-    my @a = ref $_[0]? @{$_[0]} : split(/,/, $_[0]);
-    my @b = ref $_[1]? @{$_[1]} : split(/,/, $_[1]);
+    my @a = ref $_[0] ? @{$_[0]} : split(/,/, $_[0]);
+    my @b = ref $_[1] ? @{$_[1]} : split(/,/, $_[1]);
     foreach my $a (@a) {
         next unless defined $a && $a ne q{};
         foreach my $b (@b) {
@@ -123,7 +127,8 @@ sub do_by_prefix {
     use constant PST_SEQ => 1;
     use constant PST_TAG => 2;
     use constant PST_NAM => 3;
-    say "Discovered Prefixen:" if $VERBOSE;
+    say "Discovered Prefixen:" if $VERBOSE >= 2;
+
     foreach my $layer (@LAYERS) {
         next unless $layer =~ m{^\s* ([pbc])                                # Start char
                                      ($seq_re (?: \, $seq_re)* )?           # Seqnums
@@ -137,17 +142,15 @@ sub do_by_prefix {
             . "\ttags: "
             . ($pset->[PST_TAG] || q{--})
             . "\tlayer: '$pset->[PST_NAM]'"
-            if $VERBOSE;
+            if $VERBOSE >= 2;
     }
-    say "" if $VERBOSE;
+    say "" if $VERBOSE >= 2;
     die "*** No layer prefixes discovered -- output would be empty (don't use -x?)\n"
         unless @prefixen;
 
     # If conditional tags given, toss out layers that don't match
     if (@CTAGS) {
-        @prefixen = grep {
-            !$_->[PST_TAG] || any_match(\@CTAGS, $_->[PST_TAG])            
-            } @prefixen;
+        @prefixen = grep {!$_->[PST_TAG] || any_match(\@CTAGS, $_->[PST_TAG])} @prefixen;
     }
 
     # Get content sequence numbers
@@ -175,9 +178,10 @@ sub do_by_prefix {
         # Find all layers that match
         my $any = 0;
         foreach my $x (@prefixen) {
-            if (seq_match($sq, $x->[1], $pnum)) {               # TODO: ctag match
+            if (seq_match($sq, $x->[1], $pnum)) {    # TODO: ctag match
                 my $lname = $x->[3];
                 if ($any) {
+
                     # Add to current page
                     push @{$l2p[-1]}, $lname;
                 }
@@ -201,7 +205,7 @@ sub do_by_prefix {
 sub generate_all {
     my @l2p = @_;
 
-    say "Page Generation..." if $VERBOSE;
+    say "Page Generation..." if $VERBOSE >= 1;
     my $pnum      = 0;
     my @pdf_files = ();
     foreach my $lset (@l2p) {
@@ -209,28 +213,31 @@ sub generate_all {
 
         # Create temp SVG with desired layers set
         my $tmpfile = sprintf("$base-%3.3d.svg", $pnum);
-        say "  Temp SVG $tmpfile" if $VERBOSE;
+        say "  Temp SVG $tmpfile" if $VERBOSE >= 2;
         my $n = set_layers_visible($xpath, @$lset);
-        warn "--- No matching layers for:\n" . (map {"\t$_\n"} @$lset) unless $n;
+        warn "\n--- No matching layers for:\n" . (map {"\t$_\n"} @$lset) unless $n;
         $xml->toFile($tmpfile);
 
         # PDF generation
         my $pdffile = sprintf("$base-%3.3d.pdf", $pnum);
         push @pdf_files, $pdffile;
         generate_pdf($tmpfile, $pdffile);
-        say "   --> PDF $pdffile generated" if $VERBOSE;
+        say "   --> PDF $pdffile generated" if $VERBOSE >= 2;
 
         # Cleanup
         unlink $tmpfile;
+        print " $pnum" if $VERBOSE == 1;
     }
 
     # Unify PDF's
     if ($KEEP) {
-        say "Individual PDF files will be kept (-k)" if $VERBOSE;
+        say " K" if $VERBOSE == 1;
+        say "Individual PDF files will be kept (-k)" if $VERBOSE >= 2;
     }
     else {
-        say "  Unifying pages" if $VERBOSE;
-        my @my_pdf_files = @pdf_files;  # So we don't delete the inserted files
+        say " U" if $VERBOSE == 1;
+        say "Unifying pages" if $VERBOSE >= 2;
+        my @my_pdf_files = @pdf_files;    # So we don't delete the inserted files
 
         # Inserted pages
         foreach my $ins (@$INSERT) {
@@ -246,12 +253,12 @@ sub generate_all {
                 warn "--- Insertion page before first page; will change to first page: $ins\n";
                 $atpage = 1;
             }
-            elsif ($atpage > @pdf_files+1) {
+            elsif ($atpage > @pdf_files + 1) {
                 warn "--- Insertion page after end; will change to last page: $ins\n";
                 $atpage = @pdf_files + 1;
             }
-            say "  Insert '$file' at page $atpage" if $VERBOSE;
-            splice @pdf_files, $atpage-1, 0, $file;
+            say "Insert '$file' at page $atpage" if $VERBOSE >= 1;
+            splice @pdf_files, $atpage - 1, 0, $file;
         }
 
         # ... unify ...
@@ -260,9 +267,9 @@ sub generate_all {
             die "*** pdfunite command failure\n";
         }
 
-        say "  Cleanup" if $VERBOSE;
+        say "Cleanup" if $VERBOSE >= 2;
         unlink @my_pdf_files;
-        say "Created $outfile" if $VERBOSE;
+        say "Created $outfile" if $VERBOSE >= 1;
     }
 }
 
@@ -298,9 +305,9 @@ sub seq_match {
         return 1 if $part eq $want;
         if ($part =~ m{-}) {
             my ($m, $n) = split(/-/, $part, 2);
-            next if ($m eq '') && ($n eq '');   # We got just a dash without either side
-            next if ($m ne '') && ($want < $m); # numerical compare
-            next if ($n ne '') && ($want > $n); # numerical compare
+            next if ($m eq '') && ($n eq '');      # We got just a dash without either side
+            next if ($m ne '') && ($want < $m);    # numerical compare
+            next if ($n ne '') && ($want > $n);    # numerical compare
             return 1;
         }
     }
@@ -348,12 +355,12 @@ sub show_page_mapping {
         }
         print "\n";
     }
-    print "  Layer Name                Page # -->  ";
+    print "Layer Name                Page # -->  ";
     for my $p (1 .. $pmax) {
         print $p % 10;
     }
     print "\n";
-    say "  ==================================== +" . ('=' x $pmax) . "+";
+    say "==================================== +" . ('=' x $pmax) . "+";
 
     # Show mapping for ALL layers even those not in the layer set
     my $pnum = 0;
@@ -362,14 +369,14 @@ sub show_page_mapping {
             = length($lname) <= 36
             ? $lname
             : substr($lname, 0, 35) . '…';
-        printf("  %-36s |", $l36);
+        printf("%-36s |", $l36);
         for my $p (1 .. $pmax) {
             my @lset = @{$lsets[$p - 1]};
             print((grep {$lname eq $_} @lset) ? '*' : '.');
         }
         print "|\n";
     }
-    say "  ==================================== +" . ('=' x $pmax) . "+";
+    say "==================================== +" . ('=' x $pmax) . "+";
 }
 
 __END__
@@ -383,7 +390,7 @@ ink2pdf - Inkscape to Multi-Page PDF Document
  ink2pdf [options] inkscape-file
 
  Options:
-  -b  --background L   Use layer L as a backround layer (cannot use with -x).
+  -b  --background L   Use layer L as a backround layer (can't use with -x).
   -h  --help           Usage summary.
   -i  --insert N:file  Insert existing PDF file into document at page N.
                          May use multiple times.  N starts at 1.
@@ -398,11 +405,12 @@ ink2pdf - Inkscape to Multi-Page PDF Document
                          replace the ".svg" suffix of the input file name 
                          with ".pdf"; if no ".svg" suffix then ".pdf" is 
                          appended.
-  -t  --tags TAGS      Conditional tags in effect; separate tags with commas.
+  -q  --quiet          No output except warnings and errors.
+  -t  --tags TAGS      Conditional tags in effect; delimit tags with commas.
                          Tags only processed when using prefixes; thus
                          you must use -x too when using -t. 
   -x  --prefixes       Parse prefixes in layer names.
-  -v  --verbose        Verbose mode.
+  -v  --verbose        Verbose mode.  Overrides -q.
 
 =head1 DESCRIPTION
 
