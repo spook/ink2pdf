@@ -76,6 +76,11 @@ if ($BGLAYER) {
     }
 }
 
+# Option for PDF output was changed in 1.x
+`inkscape --version 2> /dev/null` =~ /(\d+)\.(\d+)\.(\d+)/
+    or die "*** Cannot determine inkscape version";
+my $inkscape_options = $1 == 0 ? "-z -A " : "--export-filename=";
+
 # Generate the PDF's
 $XMODE
     ? do_by_prefix()
@@ -277,7 +282,7 @@ sub generate_all {
 sub generate_pdf {
     my $inkfile = shift;
     my $outfile = shift;
-    system("inkscape -z -A '$outfile' '$inkfile' 2>/dev/null") == 0
+    system("inkscape $inkscape_options'$outfile' '$inkfile' 2>/dev/null") == 0
         or die "*** inkscape command failure\n";
 }
 
