@@ -14,8 +14,10 @@ use XML::LibXML::XPathContext;
 my $opts = {};
 GetOptions($opts,
     "background|b:s",
+    "debug|d", # don't document may go away
     "help|h",
     "insert|i:s@",
+    "inkbinary|I:s",
     "keep|k",
     "list-layers|l",
     "show-mapping|m",
@@ -36,11 +38,12 @@ pod2usage(
     -verbose => 0,
     -exitval => 2,                                    # 2 = ENOENT NO such file
     -message => "*** Missing Inkscape SVG filename"
-) if !@ARGV;
+) if !@ARGV && !$opts->{debug};
 my $SVGFILE     = $ARGV[0];
 my $BGLAYER     = $opts->{background} || q{};
 my $KEEP        = $opts->{keep};
 my $INSERT      = $opts->{insert} || [];
+my $INKBIN      = $opts->{'inkbinary'} || "inkscape";
 my $LISTLAYERS  = $opts->{'list-layers'};
 my $SHOWMAPPING = $opts->{'show-mapping'};
 my @CTAGS       = split(',', $opts->{tags} || q{});
@@ -51,6 +54,19 @@ my $VERBOSE
 my $XMODE = $opts->{prefixes};
 die "*** Conditional tags may only be used with --prefixes (-x)\n"
     if @CTAGS && !$XMODE;
+
+# Verbosity should affect inkscape stderr, too
+my $inkscape_stderr = $VERBOSE == 2 ? "" : "2>/dev/null";
+
+# Option for PDF output was changed in 1.x
+my $inkscape_version = `$INKBIN --version $inkscape_stderr`;
+$inkscape_version =~ m/(\d+)\.(\d+)\.(\d+)/smg
+    or die "*** Cannot determine inkscape version at '$INKBIN' from string '$inkscape_version'\n";
+my $inkscape_options = $1 == 0 ? "-z -A " : "--export-filename=";
+print "Using inkscape binary '$INKBIN'\n" if $VERBOSE == 2;
+print "Detected inkscape version $inkscape_version\n" if $VERBOSE == 2;
+exit 0 if $opts->{debug};
+
 
 # Load file
 my $xml   = XML::LibXML->load_xml(location => $SVGFILE);
@@ -75,16 +91,6 @@ if ($BGLAYER) {
         $BGLAYER = q{};
     }
 }
-
-# Verbosity should affect inkscape stderr, too
-my $inkscape_stderr = $VERBOSE == 2 ? "" : "2>/dev/null";
-
-# Option for PDF output was changed in 1.x
-my $inkscape_version = `inkscape --version $inkscape_stderr`;
-$inkscape_version =~ /(\d+)\.(\d+)\.(\d+)/
-    or die "*** Cannot determine inkscape version from '$inkscape_version'";
-print $inkscape_version if $VERBOSE == 2;
-my $inkscape_options = $1 == 0 ? "-z -A " : "--export-filename=";
 
 # Generate the PDF's
 $XMODE
@@ -272,9 +278,10 @@ sub generate_all {
         }
 
         # ... unify ...
-        if (system("pdfunite " . join(" ", map {"'$_'"} @pdf_files) . " '" . $outfile . "'") != 0) {
+        my $cmd = "pdfunite " . join(" ", map {"'$_'"} @pdf_files) . " '" . $outfile . "'";
+        if (system($cmd) != 0) {
             unlink @my_pdf_files;
-            die "*** pdfunite command failure\n";
+            die "*** pdfunite command failure: $!\n  * Command used: $cmd\n";
         }
 
         say "Cleanup" if $VERBOSE >= 2;
@@ -287,8 +294,9 @@ sub generate_all {
 sub generate_pdf {
     my $inkfile = shift;
     my $outfile = shift;
-    system("inkscape $inkscape_options'$outfile' '$inkfile' $inkscape_stderr") == 0
-        or die "*** inkscape command failure\n";
+    my $cmd     = "$INKBIN $inkscape_options'$outfile' '$inkfile' $inkscape_stderr";
+    system($cmd) == 0
+        or die "*** inkscape command failure: $!\n  * Command used: $cmd";
 }
 
 # Get layer names (technically, called "labels")
@@ -335,11 +343,13 @@ LAYER:
         my $label = $layer->{'inkscape:label'};
         foreach my $wantlabel (@toset) {
             if ($label eq $wantlabel) {
+                $layer->{'style'} ||= "display:inline"; # Some versions omit this        
                 $layer->{'style'} =~ s{\bdisplay:none\b}{display:inline};
                 ++$numset;
                 next LAYER;
             }
         }
+        $layer->{'style'} ||= "display:inline"; # Some versions omit this        
         $layer->{'style'} =~ s{\bdisplay:inline\b}{display:none};
     }
     return $numset;
@@ -407,6 +417,10 @@ ink2pdf - Inkscape to Multi-Page PDF Document
                          1 will insert the PDF file be at the beginning.
                          Use "end" to insert at the end of the document.
                          Ignored when using -k.
+  -I  --inkbinary BIN  Use BIN for the inkscape binary (the program).
+                         For example, /usr/local/bin/inkscape or
+                         /snap/bin/inkscape.  Default is to look for
+                         'inkscape' in the current $PATH envvar.
   -k  --keep           Don't unite the pages into one PDF; keep each page 
                          as it's own numbered .pdf file.
   -l  --list-layers    Show layer names and exit.
