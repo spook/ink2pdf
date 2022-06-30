@@ -60,7 +60,7 @@ my $inkscape_stderr = $VERBOSE == 2 ? "" : "2>/dev/null";
 
 # Option for PDF output was changed in 1.x
 my $inkscape_version = `$INKBIN --version $inkscape_stderr`;
-$inkscape_version =~ m/(\d+)\.(\d+)\.(\d+)/smg
+$inkscape_version =~ m/(\d+)\.(\d+)(\.(\d+))?/smg
     or die "*** Cannot determine inkscape version at '$INKBIN' from string '$inkscape_version'\n";
 my $inkscape_options = $1 == 0 ? "-z -A " : "--export-filename=";
 print "Using inkscape binary '$INKBIN'\n" if $VERBOSE == 2;
