@@ -1,6 +1,9 @@
 # ink2pdf
 Generates a multi-page PDF document from your Inkscape document.
 
+Note: Inkscape 1.2 introduces multiple-page support; if you use 
+Inkscape 1.2+ then there's no need for this _ink2pdf_ utility.
+
 ## Multiple Pages.. In Inkscape?
 
 Inkscape is a drawing tool, right?
